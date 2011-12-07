@@ -1,0 +1,96 @@
+Introduction
+============
+
+Q: What is libntoh?
+A: Libntoh aims to be an user-friendly library to provide a easy way to perform defragmentation and reassembly of network/transport/(more?) protocols.
+
+Q: Why libntoh?
+A: It's true there are some libraries which aims to do the same things (like libnids), but libntoh is intended to provide a flexible, thread-safe and highly configurable environment for the final user. And most of all, libntoh is released under Modified BSD License to avoid many license issues.
+
+Q: Which protocols does libntoh support?
+A: Currently libntoh performs IP defragmentation and TCP reassembly
+
+
+Dependencies
+============
+
+To successfully compile libntoh you only need gcc, make, cmake, pkg-config and libpthread-dev.
+
+Debian-like OS:
+
+	$ sudo apt-get install cmake libpthread-dev gcc make build-essential pkg-config
+
+If you want to generate the source code documentation, you will also need doxygen:
+
+	$ sudo apt-get install doxygen
+
+Note: pkg-config isn't really needed but it helps. (See "ntohexample" compilation)
+
+
+You need CMake to compile libntoh and ntohexample.
+
+
+Compilation instructions
+========================
+
+../libntoh$ mkdir build
+../libntoh$ cd build
+../libntoh/build$ cmake ../
+(...)
+../libntoh/build$ make
+(...)
+../libntoh/build$ sudo make install
+[sudo] password for sch3m4: 
+(...)
+../libntoh/build$
+
+
+"ntohexample" Compilation instructions
+======================================
+
+../libntoh$ cd example
+../libntoh/example$ ./build.sh 
+[i] pkg-config found: /usr/bin/pkg-config
+[i] cmake found: /usr/bin/cmake
+[i] make found: /usr/bin/make
+[i] PKG_CONFIG_PATH set to: /usr/local/lib/pkgconfig
+(...)
+Linking C executable ntohexample
+[100%] Built target ntohexample
+../libntoh/example$ ./build/ntohexample
+
+###########################
+#     libntoh Example     #
+# ----------------------- #
+# Written by Chema Garcia #
+# ----------------------- #
+#    http://opensec.es    #
+#    sch3m4@opensec.es    #
+#    sch3m4@brutalsec.net #
+###########################
+
+[i] libntoh version: 0.3a
+
+[+] Usage: ./ntohexample <options>
+
++ Options:
+	-i | --iface <val> -----> Interface to read packets from
+	-f | --file <val> ------> File path to read packets from
+	-F | --filter <val> ----> Capture filter (must contain "tcp")
+
+../libntoh/example$
+
+The default installation prefix is "/usr/local", so if you plan to link against libntoh using pkg-config
+remember to add "/usr/local/lib/pkgconfig" to PKG_CONFIG_PATH:
+
+$ export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+$ pkg-config --libs --cflags ntoh
+-I/usr/local/include/libntoh  -L/usr/local/lib -lntoh
+
+On the other hand you can change the installation prefix by defining CMAKE_INSTALL_PREFIX:
+
+$ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
+
+So the new installation prefix will be "/usr"
+
+For more information, refer to the wiki page.

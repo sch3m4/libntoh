@@ -291,17 +291,8 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 						fprintf ( stderr , "\n\t\t- Server: %s:%d (MSS: %i SACK: %i WSize: %i WScale: %i)\n" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , dest->mss , dest->sack , dest->wsize , dest->wscale );
 						break;
 
-					case NTOH_REASON_MAX_SYN_RETRIES_REACHED:
-					case NTOH_REASON_MAX_SYNACK_RETRIES_REACHED:
-					case NTOH_REASON_HSFAILED:
-					case NTOH_REASON_TIMEDOUT:
-					case NTOH_REASON_EXIT:
-					case NTOH_REASON_SYNC:
-						fprintf ( stderr , "+ %s | %s\n" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) );
-						break;
-
 					default:
-						fprintf ( stderr , "+ (SYNC) I don't know what is %i" , extra );
+						fprintf ( stderr , "+ %s | %s\n" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) );
 						break;
 				}
 			break;
@@ -314,28 +305,8 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 			write_data( (ppeer_info_t) seg->user_data );
 
 			if ( extra != 0 )
-				switch ( extra )
-				{
-					case NTOH_REASON_NOWINDOW:
-					case NTOH_REASON_EXIT:
-					case NTOH_REASON_TIMEDOUT:
-					case NTOH_REASON_OOO:
-						fprintf ( stderr , "- %s" , ntoh_get_reason ( extra ) );
-						break;
+					fprintf ( stderr , "- %s" , ntoh_get_reason ( extra ) );
 
-					default:
-						fprintf ( stderr , "- (DATA) I don't know what is %i ?¿" , extra );
-						break;
-				}
-			break;
-
-		/* Library exiting */
-		/*case NTOH_REASON_EXIT:
-			fprintf ( stderr , "+ %s | %s" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) );
-			break;*/
-
-		default:
-			fprintf ( stderr , "\n(Main) I don't know what is %i/%i ?¿?¿" , reason , extra );
 			break;
 	}
 

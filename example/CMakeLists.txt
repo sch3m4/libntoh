@@ -1,0 +1,22 @@
+CMAKE_MINIMUM_REQUIRED ( VERSION 2.8 FATAL_ERROR )
+PROJECT ( LIBNTOHEXAMPLE )
+
+# find libpthread
+FIND_PACKAGE ( Threads REQUIRED )
+
+# find pkg-config
+FIND_PACKAGE ( PkgConfig REQUIRED )
+
+# find libntoh
+PKG_CHECK_MODULES ( NTOH REQUIRED ntoh )
+INCLUDE_DIRECTORIES ( ${NTOH_INCLUDE_DIRS} )
+LINK_DIRECTORIES ( ${NTOH_LIBRARY_DIRS} )
+ADD_DEFINITIONS ( ${NTOH_CFLAGS} )
+
+# set source files and flags
+SET ( LIBNTOHEXAMPLE_SRCS example.c )
+SET ( CMAKE_CXX_FLAGS "-g -Wall -Os -O2 -lpcap" )
+
+# set target from source
+ADD_EXECUTABLE ( ntohexample ${LIBNTOHEXAMPLE_SRCS} )
+TARGET_LINK_LIBRARIES ( ntohexample pcap ntoh ${CMAKE_THREAD_LIBS_INIT})

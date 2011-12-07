@@ -1,0 +1,9 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: ntoh
+Description: C library to perform reassembly of network protocols
+Version: @LIBNTOH_VERSION@
+Libs: -L${libdir} -l@OUTPUT_LIB@
+Cflags: -I${includedir}/libntoh

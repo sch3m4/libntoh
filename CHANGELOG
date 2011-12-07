@@ -1,0 +1,27 @@
+libntoh (0.3a)
+	* TCP reassembly has been totally rewritten
+	* Added IPv4 defragmentation
+	
+	-- Chema Garcia <sch3m4@opensec.es> (7/12/2011)
+
+libntoh (0.2a)
+
+	* Directory tree restructured
+	* Changelog added
+	* Self implementation of linked lists (no glib-2.0 needed)
+	* C files restructured
+	* Added a function to get libntoh version
+	* Some macros to get descriptions about errors,status,etc. are now exported C functions
+	* ntohexample code updated
+	* More comments added
+	* Documentation regenerated
+	* Added forgoten call to "shandler" in ntohexample
+	* Added pkg-config compilation support
+	
+	-- Chema Garcia <sch3m4@opensec.es> (14/11/2011)
+
+libntoh (0.1a)
+
+	* First release
+	
+	-- Chema Garcia <sch3m4@opensec.es> (7/11/2011)

@@ -126,6 +126,10 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 	ret->function = (void*) function;
 	ret->udata = udata;
 
+	session->lock.use = 0;
+	pthread_mutex_init ( &session->lock.mutex , 0 );
+	pthread_cond_init ( &session->lock.pcond , 0 );
+
 	lock_access( &session->lock );
 
 	HASH_ADD_INT( session->flows, key, ret );
@@ -236,6 +240,9 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	HASH_DEL( session->flows ,flow );
 
 	sem_post( &session->max_flows );
+	pthread_cond_destroy( &session->lock.pcond );
+	pthread_mutex_destroy( &session->lock.mutex );
+
 	free( flow );
 
 	return;
@@ -248,6 +255,7 @@ void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow
 
 	lock_access( &session->lock );
 
+	lock_access ( &flow->lock );
 	__ipv4_free_flow ( session , flow , reason );
 
 	unlock_access( &session->lock );
@@ -263,6 +271,7 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	unsigned int data_len = 0;
 	unsigned char *data = 0;
 	unsigned long flen = 0;
+	int				ret = NTOH_OK;
 	pntoh_ipv4_fragment_t frag = 0;
 
 	if ( !flow )
@@ -289,30 +298,47 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	if ( iphdr->ip_v != 4 )
 		return NTOH_NOT_IPV4;
 
+	lock_access ( &flow->lock );
+
 	/* check if addresses matches */
 	if ( flow->ident.source != iphdr->ip_src.s_addr || flow->ident.destination != iphdr->ip_dst.s_addr )
-		return NTOH_IP_ADDRESSES_MISMATCH;
+	{
+		ret = NTOH_IP_ADDRESSES_MISMATCH;
+		goto exitp;
+	}
 
 	flags = ntohs( iphdr->ip_off );
 	offset = NTOH_GET_IPV4_FRAGMENT_OFFSET(iphdr->ip_off);
 
 	/* check if it is a fragment */
 	if ( !( IS_SET(flags,IP_MF) || offset > 0 ) || IS_SET(flags,IP_DF) )
-		return NTOH_NOT_AN_IP_FRAGMENT;
+	{
+		ret = NTOH_NOT_AN_IP_FRAGMENT;
+		goto exitp;
+	}
 
 	/* checks if the fragment is hand crafted */
 	if ( IS_SET(flags,IP_MF) && data_len < MIN_FRAGMENT_LENGTH )
-		return NTOH_TOO_LOW_IP_FRAGMENT_LENGTH;
+	{
+		ret = NTOH_TOO_LOW_IP_FRAGMENT_LENGTH;
+		goto exitp;
+	}
 
 	/* (1/2) checks if data length will overload max. amount of data allowed for an IPv4 datagram */
 	flen = flow->meat;
 	if ( flen + data_len > MAX_DATAGRAM_LENGTH )
-		return NTOH_IP_FRAGMENT_OVERRUN;
+	{
+		ret = NTOH_IP_FRAGMENT_OVERRUN;
+		goto exitp;
+	}
 
 	/* (2/2) checks if data length will overload max. amount of data allowed for an IPv4 datagram */
 	flen = offset;
 	if ( flen + data_len > MAX_DATAGRAM_LENGTH )
-		return NTOH_IP_FRAGMENT_OVERRUN;
+	{
+		ret = NTOH_IP_FRAGMENT_OVERRUN;
+		goto exitp;
+	}
 
 	sem_wait ( &session->max_fragments );
 
@@ -338,11 +364,16 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 
 	/* if there are no holes */
 	if ( flow->final_iphdr != 0 && flow->total == flow->meat )
-		ntoh_ipv4_free_flow( session , flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
-	else
+	{
+		lock_access ( &session->lock );
+		__ipv4_free_flow ( session , flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
+		unlock_access ( &session->lock );
+	}else
 		gettimeofday( &flow->last_activ, 0 );
 
-	return NTOH_OK;
+exitp:
+	unlock_access ( &flow->lock );
+	return ret;
 }
 
 unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session )
@@ -410,9 +441,10 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-	session->lock.use = 0;
+
 	session->table_size = max_flows;
 	sem_init ( &session->max_flows , 0 , max_flows );
+	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );
 	pthread_cond_init ( &session->lock.pcond , 0 );
 	pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
@@ -456,7 +488,10 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 
 	lock_access( &session->lock );
 	HASH_ITER ( hh , session->flows , item , tmp )
+	{
+		lock_access ( &item->lock );
 		__ipv4_free_flow ( session , item , NTOH_REASON_EXIT );
+	}
 	unlock_access( &session->lock );
 
 	pthread_cancel ( session->tID );

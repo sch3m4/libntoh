@@ -87,6 +87,7 @@ typedef struct
 	struct timeval last_activ;
 	/// user-defined data
 	void *udata;
+	ntoh_lock_t lock;
 	/// allows this struct to be indexed in a hash table
 	UT_hash_handle hh;
 } ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;

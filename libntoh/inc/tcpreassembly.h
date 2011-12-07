@@ -159,6 +159,7 @@ typedef struct _tcp_stream_
 	///max. allowed SYN/ACK retries
 	unsigned int synack_retries;
 	void *udata;
+	ntoh_lock_t	lock;
 	UT_hash_handle hh;
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 

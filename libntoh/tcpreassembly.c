@@ -226,10 +226,19 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	}
 
 	lock_access( &session->lock );
+
 	HASH_ITER ( hh , session->streams , item , tmp )
+	{
+		lock_access( &item->lock );
 		__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
+	}
+
 	HASH_ITER ( hh , session->timewait , item , tmp )
+	{
+		lock_access( &item->lock );
 		__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
+	}
+
 	unlock_access( &session->lock );
 
 	pthread_cancel ( session->tID );
@@ -384,7 +393,10 @@ void ntoh_tcp_free_session ( pntoh_tcp_session_t session )
 void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , int reason , int extra )
 {
 	lock_access( &session->lock );
+
+	lock_access( &stream->lock );
 	__tcp_free_stream ( session , stream , reason ,extra );
+
 	unlock_access(&session->lock);
 
 	return;
@@ -512,6 +524,10 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->status = stream->client.status = stream->server.status = NTOH_STATUS_CLOSED;
 	stream->function = (void*) function;
 	stream->udata = udata;
+
+	stream->lock.use = 0;
+    pthread_mutex_init( &stream->lock.mutex, 0 );
+    pthread_cond_init( &stream->lock.pcond, 0 );
 
 	HASH_ADD_INT( session->streams, key, stream );
 	unlock_access( &session->lock );
@@ -1036,6 +1052,8 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	if ( !tcp->th_flags || tcp->th_flags == 0xFF )
 		return NTOH_INVALID_FLAGS;
 
+	lock_access ( &stream->lock );
+
     /* check TCP ports */
     if ( !(
     		( tcp->th_dport == stream->tuple.dport && tcp->th_sport == stream->tuple.sport ) ||
@@ -1061,7 +1079,10 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     if ( tstamp > 0 && origin->lastts > 0 )
     {
     	if ( tstamp < origin->lastts )
-    		return NTOH_PAWS_FAILED;
+    	{
+    		ret = NTOH_PAWS_FAILED;
+    		goto exitp;
+    	}
 
         if ( ntohl(tcp->th_seq) <= origin->next_seq )
         	origin->lastts = tstamp;
@@ -1070,10 +1091,16 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     	origin->lastts = tstamp;
 
     if ( origin->next_seq > 0 && (origin->isn - ntohl ( tcp->th_seq ) ) < origin->next_seq )
-    	return NTOH_TOO_LOW_SEQ_NUMBER;;
+    {
+    	ret = NTOH_TOO_LOW_SEQ_NUMBER;
+    	goto exitp;
+    }
 
     if ( destination->next_seq > 0 && (origin->ian - ntohl(tcp->th_ack) ) < destination->next_seq )
-    	return NTOH_TOO_LOW_ACK_NUMBER;
+    {
+    	ret = NTOH_TOO_LOW_ACK_NUMBER;
+    	goto exitp;
+    }
 
     /* @todo some TCP/IP stacks implementations overloads the MSS on certain segments */
     /*if ( origin->mss > 0 && payload_len > origin->mss )
@@ -1086,7 +1113,10 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     	case NTOH_STATUS_SYNSENT:
     	case NTOH_STATUS_SYNRCV:
     		if ( payload_len > 0 )
-    			return NTOH_HANDSHAKE_FAILED;
+    		{
+    			ret = NTOH_HANDSHAKE_FAILED;
+    			goto exitp;
+    		}
 
     		ret = handle_new_connection ( stream , tcp , origin ,  destination , udata );
     		if ( ret == NTOH_OK )
@@ -1095,8 +1125,11 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     				((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_ESTABLISHED );
     			else
     				((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
-    		}else
+    		}else{
+    			lock_access ( &session->lock );
     			delete_stream ( session , stream , NTOH_REASON_SYNC , ret );
+    			unlock_access ( &session->lock );
+    		}
 
     		break;
 
@@ -1110,7 +1143,9 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 
     		if ( stream->status == NTOH_STATUS_CLOSED )
     		{
-    			ntoh_tcp_free_stream ( session , stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+    			lock_access ( &session->lock );
+    			__tcp_free_stream ( session , stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+    			unlock_access ( &session->lock );
     			stream = 0;
     		}
     		break;
@@ -1124,6 +1159,9 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 		if ( payload_len == 0 )
 			ret = NTOH_SYNCHRONIZING;
 	}
+
+exitp:
+	unlock_access ( &stream->lock );
 
 	return ret;
 }

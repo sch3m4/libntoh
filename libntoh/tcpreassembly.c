@@ -1045,8 +1045,8 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	tcp = (struct tcphdr*) ( (unsigned char*)ip + iphdr_len );
 
 	/* check TCP header */
-    if ( ( tcphdr_len = tcp->th_off * 4 ) < sizeof(struct tcphdr) )
-            return NTOH_INCORRECT_TCP_HEADER_LENGTH;
+    /*if ( ( tcphdr_len = tcp->th_off * 4 ) < sizeof(struct tcphdr) )
+            return NTOH_INCORRECT_TCP_HEADER_LENGTH;*/
 
 	if ( !tcp->th_flags || tcp->th_flags == 0xFF )
 		return NTOH_INVALID_FLAGS;

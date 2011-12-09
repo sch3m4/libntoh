@@ -1036,9 +1036,8 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	if ( !(
 			( stream->client.addr == ip->ip_src.s_addr && stream->server.addr == ip->ip_dst.s_addr ) ||
 			( stream->client.addr == ip->ip_dst.s_addr && stream->server.addr == ip->ip_src.s_addr )
-		)){
+		))
 		return NTOH_IP_ADDRESSES_MISMATCH;
-	}
 
 	if ( ip->ip_p != IPPROTO_TCP )
 		return NTOH_NOT_TCP;

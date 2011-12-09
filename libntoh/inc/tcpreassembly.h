@@ -150,7 +150,7 @@ typedef struct _tcp_stream_
 	unsigned int status;
 	///who closed the connection
 	unsigned short closedby;
-	///user defined function to receive data
+	///user-defined function to receive data
 	void *function;
 	///last activity
 	struct timeval last_activ;
@@ -158,6 +158,7 @@ typedef struct _tcp_stream_
 	unsigned int syn_retries;
 	///max. allowed SYN/ACK retries
 	unsigned int synack_retries;
+	///user-defined data linked to this stream
 	void *udata;
 	ntoh_lock_t	lock;
 	UT_hash_handle hh;

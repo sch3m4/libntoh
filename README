@@ -1,3 +1,16 @@
+Getting the source
+==================
+
+$ git clone git://github.com/sch3m4/libntoh.git ~/libntoh-ro
+Cloning into '/home/<user>/libntoh-ro'...
+remote: Counting objects: 70, done.
+remote: Compressing objects: 100% (64/64), done.
+remote: Total 70 (delta 31), reused 34 (delta 2)
+Receiving objects: 100% (70/70), 46.61 KiB | 39 KiB/s, done.
+Resolving deltas: 100% (31/31), done.
+$
+
+
 Introduction
 ============
 

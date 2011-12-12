@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <sys/time.h>
 #include <libntoh.h>
 
@@ -470,7 +471,6 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t tuple4 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error )
 {
 	pntoh_tcp_stream_t stream = 0;
-	pntoh_tcp_stream_t tmp = 0;
 	ntoh_tcp_key_t key = tcp_getkey( session , tuple4 );
 
 	if ( !key )
@@ -610,7 +610,6 @@ inline static void get_tcp_options ( pntoh_tcp_peer_t peer , struct tcphdr *tcp 
 inline static void get_timestamp ( struct tcphdr *tcp , size_t tcp_len , unsigned int *ts )
 {
     unsigned char *options = 0;
-    unsigned int aux = 0;
     unsigned int tmp = 0;
 
     if ( tcp_len == sizeof(struct tcphdr) )
@@ -701,9 +700,7 @@ inline static pntoh_tcp_segment_t new_segment ( unsigned long seq , unsigned lon
 /** @brief Sends all possible segments to the user or only the first one **/
 inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , unsigned int ack , unsigned short first , int extra )
 {
-	pntoh_tcp_segment_t		aux = 0;
 	pntoh_tcp_segment_t 	segment = 0;
-	pntoh_tcp_callback_t	func = 0;
 	unsigned int			ret = 0;
 
 

@@ -92,7 +92,7 @@ static const char reason_descriptions[][30]=
 };
 
 /* API errors */
-const char api_errors[][25] = {
+static const char api_errors[][25] = {
 		"No error",
 		"Cannot allocate memory",
 		"No space for add streams",

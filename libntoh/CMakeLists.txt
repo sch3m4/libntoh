@@ -3,7 +3,7 @@ PROJECT ( LIBNTOH )
 
 # set source files and flags
 SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c )
-SET ( CMAKE_CXX_FLAGS "-Wall -Os -O2 -ansi -pedantic -pipe -Wfatal-errors -Wextra -Wunused" )
+SET ( CMAKE_CXX_FLAGS "-Wall -Os -O2 -ansi -pedantic -pipe" )
 SET ( LIBNTOH_INC inc )
 
 # set project version
@@ -14,6 +14,8 @@ SET ( ${PROJECT_NAME}_VERSION "${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME
 
 # set include directories
 INCLUDE_DIRECTORIES ( ${LIBNTOH_INC} )
+
+SET ( CMAKE_BUILD_TYPE Release )
 
 # set output library name
 SET ( OUTPUT_LIB ntoh )

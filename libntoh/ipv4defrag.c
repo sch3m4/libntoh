@@ -31,6 +31,7 @@
 #define __FAVOR_BSD
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <netinet/ip.h>
 #include <sys/time.h>
 

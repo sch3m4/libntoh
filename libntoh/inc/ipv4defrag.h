@@ -180,7 +180,7 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
  * @param flow IPv4 flow to be freed
  * @param reason Why has been freed the flow?
  */
-void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , unsigned short reason );
+void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason );
 
 /**
  * @brief Adds a new IPv4 fragment to a given flow

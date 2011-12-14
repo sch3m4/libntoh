@@ -266,7 +266,7 @@ void ntoh_tcp_free_session ( pntoh_tcp_session_t session );
  * @param reason Value to be sent to the user defined function
  * @param extra Value to be sent to the user defined function
  */
-void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , int reason , int extra );
+void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra );
 
 /**
  * @brief Finds a TCP stream

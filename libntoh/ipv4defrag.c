@@ -35,7 +35,7 @@
 #include <netinet/ip.h>
 #include <sys/time.h>
 
-#include "libntoh.h"
+#include "common.h"
 
 static struct
 {
@@ -46,32 +46,6 @@ static struct
 
 #define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
 #define IS_SET(a,b)								(a & b)
-
-inline static void lock_access ( pntoh_lock_t lock )
-{
-        pthread_mutex_lock( &lock->mutex );
-
-        while ( lock->use )
-                pthread_cond_wait( &lock->pcond, &lock->mutex );
-
-        lock->use = 1;
-
-        pthread_mutex_unlock( &lock->mutex );
-
-        return;
-}
-
-inline static void unlock_access ( pntoh_lock_t lock )
-{
-        pthread_mutex_lock( &lock->mutex );
-
-        lock->use = 0;
-        pthread_cond_signal( &lock->pcond );
-
-        pthread_mutex_unlock( &lock->mutex );
-
-        return;
-}
 
 inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
@@ -228,35 +202,43 @@ inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pnt
 	return ret;
 }
 
-inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , unsigned short reason )
+inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason )
 {
 	unsigned char *buffer = 0;
+	pntoh_ipv4_flow_t item = 0;
 
-	buffer = build_datagram ( session , flow );
+	if ( !flow || !(*flow) )
+		return;
+
+	item = *flow;
+
+	buffer = build_datagram ( session , item );
 
 	/* notify to the user */
-	( (pipv4_dfcallback_t) flow->function )( flow, &flow->ident, buffer , flow->meat , reason );
+	( (pipv4_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	HASH_DEL( session->flows ,flow );
+	HASH_DEL( session->flows ,item );
 
 	sem_post( &session->max_flows );
-	pthread_cond_destroy( &session->lock.pcond );
-	pthread_mutex_destroy( &session->lock.mutex );
 
-	free( flow );
+	free_lockaccess ( &session->lock );
+
+	free( item );
+
+	*flow = 0;
 
 	return;
 }
 
-void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , unsigned short reason )
+void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason )
 {
-	if ( !flow )
+	if ( !flow || !(*flow) )
 		return;
 
 	lock_access( &session->lock );
 
-	lock_access ( &flow->lock );
+	lock_access ( &(*flow)->lock );
 	__ipv4_free_flow ( session , flow , reason );
 
 	unlock_access( &session->lock );
@@ -367,7 +349,7 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	if ( flow->final_iphdr != 0 && flow->total == flow->meat )
 	{
 		lock_access ( &session->lock );
-		__ipv4_free_flow ( session , flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
+		__ipv4_free_flow ( session , &flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
 		unlock_access ( &session->lock );
 	}else
 		gettimeofday( &flow->last_activ, 0 );
@@ -404,7 +386,7 @@ inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 	HASH_ITER(hh, session->flows, item, tmp)
 		/* timeout expired */
 		if ( DEFAULT_IPV4_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
-			__ipv4_free_flow ( session , item , NTOH_REASON_TIMEDOUT );
+			__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT );
 
 	unlock_access( &session->lock );
 
@@ -491,7 +473,7 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 	HASH_ITER ( hh , session->flows , item , tmp )
 	{
 		lock_access ( &item->lock );
-		__ipv4_free_flow ( session , item , NTOH_REASON_EXIT );
+		__ipv4_free_flow ( session , &item , NTOH_REASON_EXIT );
 	}
 	unlock_access( &session->lock );
 
@@ -499,8 +481,8 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 	pthread_join ( session->tID , 0 );
 	sem_destroy ( &session->max_flows );
 	sem_destroy ( &session->max_fragments );
-    pthread_cond_destroy( &session->lock.pcond );
-    pthread_mutex_destroy( &session->lock.mutex );
+
+	free_lockaccess ( &session->lock );
 
     free ( session );
 
@@ -546,8 +528,7 @@ void ntoh_ipv4_exit ( void )
 
 	unlock_access ( &params.lock );
 
-    pthread_cond_destroy( &params.lock.pcond );
-    pthread_mutex_destroy( &params.lock.mutex );
+	free_lockaccess ( &params.lock );
 
     params.init = 0;
 

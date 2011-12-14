@@ -28,120 +28,39 @@
  * POSSIBILITY OF SUCH DAMAGE.                                                  *
  ********************************************************************************/
 
-/**
- * @author Chema Garcia (aka sch3m4) <sch3m4@opensec.es || sch3m4@brutalsec.net>
- * @mainpage https://code.google.com/p/libntoh/
- * @version 0.4a
- */
+#include <pthread.h>
+#include "common.h"
 
-#include "libntoh.h"
-
-#define VERSION "0.4a"
-
-static const char retval_descriptions[][48] =
+_HIDDEN void lock_access ( pntoh_lock_t lock )
 {
-		/* ntoh_add_ipv4fragment */
-		"Success" ,
-		"Incorrect IP flow" ,
-		"Incorrect IP header" ,
-		"Incorrect length" ,
-		"Incorrect length" ,
-		"Not an IPv4 datagram" ,
-		"IP addresses mismatch" ,
-		"Not an IP fragment" ,
-		"Too small IP fragment",
-		"Fragment overrun" ,
-		"Max. IP fragments reached" ,
-		"No enough data",
+	pthread_mutex_lock( &lock->mutex );
 
-		/* ntoh_add_tcpsegment return values description */
-		"Incorrect session" ,
-		"Incorrect TCP header length" ,
-		"TCP ports mismatch",
-		"Invalid flags" ,
-		"Too low seq. number" ,
-		"Too low ack. number" ,
-		"PAWS check failed",
-		"TCP handshake failed" ,
-		"Max. SYN retries reached" ,
-		"Max. SYN/ACK retries reached" ,
-		"No TCP window space left",
-		"Not a TCP segment",
-		"Synchronizing connection"
-};
+	while ( lock->use )
+		pthread_cond_wait( &lock->pcond, &lock->mutex );
 
-/** @brief reason description strings **/
-static const char reason_descriptions[][30]=
-{
-		/* TCP */
-		"Handshake failed" ,
-		"Established" ,
-		"Data" ,
-		"Closed" ,
-		"Timedout" ,
-		"Exiting" ,
-		"Out-Of-Order" ,
-		"Max. SYN retries reached" ,
-		"Max. SYN/ACK retries reached" ,
-		"Synchronization",
-		"No window space left",
+	lock->use = 1;
 
-		/* IP */
-		"Defragmented IP datagram",
-		"Timeout expired"
-};
+	pthread_mutex_unlock( &lock->mutex );
 
-/* API errors */
-static const char api_errors[][25] = {
-		"No error",
-		"Cannot allocate memory",
-		"No space for add streams",
-		"Null key",
-		"Invalid function pointer",
-		"Invalid tuple4 field(s)"
-};
-
-const char* ntoh_version ( void )
-{
-	return (const char*) VERSION;
+	return;
 }
 
-const char* ntoh_get_retval_desc ( int val )
+_HIDDEN void unlock_access ( pntoh_lock_t lock )
 {
-	unsigned int pos = (unsigned int)(val * (-1));
+	pthread_mutex_lock( &lock->mutex );
 
-	if ( pos > 24 )
-		return 0;
+	lock->use = 0;
+	pthread_cond_signal( &lock->pcond );
 
-	return retval_descriptions[pos];
+	pthread_mutex_unlock( &lock->mutex );
+
+	return;
 }
 
-const char* ntoh_get_reason ( unsigned int val )
+_HIDDEN void free_lockaccess ( pntoh_lock_t lock )
 {
-	if ( !val || val > 13 )
-		return 0;
-
-	return reason_descriptions[val - 1];
-}
-
-const char* ntoh_get_errdesc ( unsigned int val )
-{
-	if ( val > 5 )
-		return 0;
-
-	return api_errors[val];
-}
-
-void ntoh_init ( void )
-{
-	ntoh_tcp_init();
-	ntoh_ipv4_init();
-}
-
-void ntoh_exit ( void )
-{
-	ntoh_tcp_exit();
-	ntoh_ipv4_exit();
+	pthread_cond_destroy( &lock->pcond );
+	pthread_mutex_destroy( &lock->mutex );
 
 	return;
 }

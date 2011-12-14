@@ -1,3 +1,6 @@
+#ifndef __LIBNTOH_COMMON_H__
+# define __LIBNTOH_COMMON_H__
+
 /********************************************************************************
  * Copyright (c) 2011, Chema Garcia                                             *
  * All rights reserved.                                                         *
@@ -28,120 +31,18 @@
  * POSSIBILITY OF SUCH DAMAGE.                                                  *
  ********************************************************************************/
 
-/**
- * @author Chema Garcia (aka sch3m4) <sch3m4@opensec.es || sch3m4@brutalsec.net>
- * @mainpage https://code.google.com/p/libntoh/
- * @version 0.4a
- */
+#include <libntoh.h>
 
-#include "libntoh.h"
+#ifndef _HIDDEN
+# define _HIDDEN __attribute__((visibility("hidden")))
+# endif
 
-#define VERSION "0.4a"
+/** @brief Access locking **/
+_HIDDEN void lock_access ( pntoh_lock_t lock );
 
-static const char retval_descriptions[][48] =
-{
-		/* ntoh_add_ipv4fragment */
-		"Success" ,
-		"Incorrect IP flow" ,
-		"Incorrect IP header" ,
-		"Incorrect length" ,
-		"Incorrect length" ,
-		"Not an IPv4 datagram" ,
-		"IP addresses mismatch" ,
-		"Not an IP fragment" ,
-		"Too small IP fragment",
-		"Fragment overrun" ,
-		"Max. IP fragments reached" ,
-		"No enough data",
+/** @brief Access unlocking **/
+_HIDDEN void unlock_access ( pntoh_lock_t lock );
 
-		/* ntoh_add_tcpsegment return values description */
-		"Incorrect session" ,
-		"Incorrect TCP header length" ,
-		"TCP ports mismatch",
-		"Invalid flags" ,
-		"Too low seq. number" ,
-		"Too low ack. number" ,
-		"PAWS check failed",
-		"TCP handshake failed" ,
-		"Max. SYN retries reached" ,
-		"Max. SYN/ACK retries reached" ,
-		"No TCP window space left",
-		"Not a TCP segment",
-		"Synchronizing connection"
-};
+_HIDDEN void free_lockaccess ( pntoh_lock_t lock );
 
-/** @brief reason description strings **/
-static const char reason_descriptions[][30]=
-{
-		/* TCP */
-		"Handshake failed" ,
-		"Established" ,
-		"Data" ,
-		"Closed" ,
-		"Timedout" ,
-		"Exiting" ,
-		"Out-Of-Order" ,
-		"Max. SYN retries reached" ,
-		"Max. SYN/ACK retries reached" ,
-		"Synchronization",
-		"No window space left",
-
-		/* IP */
-		"Defragmented IP datagram",
-		"Timeout expired"
-};
-
-/* API errors */
-static const char api_errors[][25] = {
-		"No error",
-		"Cannot allocate memory",
-		"No space for add streams",
-		"Null key",
-		"Invalid function pointer",
-		"Invalid tuple4 field(s)"
-};
-
-const char* ntoh_version ( void )
-{
-	return (const char*) VERSION;
-}
-
-const char* ntoh_get_retval_desc ( int val )
-{
-	unsigned int pos = (unsigned int)(val * (-1));
-
-	if ( pos > 24 )
-		return 0;
-
-	return retval_descriptions[pos];
-}
-
-const char* ntoh_get_reason ( unsigned int val )
-{
-	if ( !val || val > 13 )
-		return 0;
-
-	return reason_descriptions[val - 1];
-}
-
-const char* ntoh_get_errdesc ( unsigned int val )
-{
-	if ( val > 5 )
-		return 0;
-
-	return api_errors[val];
-}
-
-void ntoh_init ( void )
-{
-	ntoh_tcp_init();
-	ntoh_ipv4_init();
-}
-
-void ntoh_exit ( void )
-{
-	ntoh_tcp_exit();
-	ntoh_ipv4_exit();
-
-	return;
-}
+#endif /* __LIBNTOH_COMMON_H__ */

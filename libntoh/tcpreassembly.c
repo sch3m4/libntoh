@@ -32,7 +32,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <libntoh.h>
+
+#include "common.h"
 
 static struct
 {
@@ -73,34 +74,6 @@ inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tc
 		return 0;
 
 	return ( ( ( data->sport & 0xFF ) | ( ( data->dport & 0xFF ) << 8 ) | ( ( data->source & 0xFF ) << 16 ) | ( ( data->destination & 0xFF ) << 24 ) ) & (session->table_size - 1) );
-}
-
-/** @brief Access locking **/
-inline static void lock_access ( pntoh_lock_t lock )
-{
-	pthread_mutex_lock( &lock->mutex );
-
-	while ( lock->use )
-		pthread_cond_wait( &lock->pcond, &lock->mutex );
-
-	lock->use = 1;
-
-	pthread_mutex_unlock( &lock->mutex );
-
-	return;
-}
-
-/** @brief Access unlocking **/
-inline static void unlock_access ( pntoh_lock_t lock )
-{
-	pthread_mutex_lock( &lock->mutex );
-
-	lock->use = 0;
-	pthread_cond_signal( &lock->pcond );
-
-	pthread_mutex_unlock( &lock->mutex );
-
-	return;
 }
 
 /** @brief Sends the given segment to the user **/
@@ -153,17 +126,23 @@ inline static void flush_peer_queues ( pntoh_tcp_session_t session , pntoh_tcp_s
 }
 
 /** @brief Remove the stream from the session streams hash table, and notify the user **/
-inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , int reason , int extra )
+inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
 	pntoh_tcp_stream_t aux = 0;
+	pntoh_tcp_stream_t item = 0;
+
+	if ( !stream || !(*stream) )
+		return;
+
+	item = *stream;
 
 	if ( session->streams != 0 )
 	{
-		HASH_FIND_INT(session->streams , &(stream->key) , aux );
+		HASH_FIND_INT(session->streams , &(item->key) , aux );
 
 		if ( aux != 0 )
 		{
-			HASH_DEL ( session->streams , stream );
+			HASH_DEL ( session->streams , item );
 			sem_post ( &session->max_streams );
 		}
 	}
@@ -171,10 +150,10 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 	if ( session->timewait != 0 )
 	{
 		aux = 0;
-		HASH_FIND_INT ( session->timewait , &(stream->key) , aux );
+		HASH_FIND_INT ( session->timewait , &(item->key) , aux );
 		if ( aux != 0 )
 		{
-			HASH_DEL ( session->timewait , stream );
+			HASH_DEL ( session->timewait , item );
 			sem_post ( &session->max_timewait );
 		}
 	}
@@ -194,17 +173,20 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 			break;
 	}
 
-	((pntoh_tcp_callback_t)stream->function)(stream,&stream->client,&stream->server,0, reason , extra );
+	((pntoh_tcp_callback_t)item->function)(item,&item->client, &item->server,0, reason , extra );
 
-	free ( stream );
+    free_lockaccess ( &item->lock );
+
+	free ( item );
+	*stream = 0;
 
 	return;
 }
 
 /** @brief Frees a TCP stream **/
-inline static void __tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , int reason , int extra )
+inline static void __tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
-	flush_peer_queues ( session , stream , extra );
+	flush_peer_queues ( session , *stream , extra );
 	delete_stream ( session , stream , reason , extra );
 
 	return;
@@ -231,13 +213,13 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	HASH_ITER ( hh , session->streams , item , tmp )
 	{
 		lock_access( &item->lock );
-		__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
+		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
 	HASH_ITER ( hh , session->timewait , item , tmp )
 	{
 		lock_access( &item->lock );
-		__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
+		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
 	unlock_access( &session->lock );
@@ -246,8 +228,8 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	pthread_join ( session->tID , 0 );
 	sem_destroy ( &session->max_streams );
 	sem_destroy ( &session->max_timewait );
-    pthread_cond_destroy( &session->lock.pcond );
-    pthread_mutex_destroy( &session->lock.mutex );
+
+	free_lockaccess ( &session->lock );
 
     free ( session );
 
@@ -297,7 +279,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 		}
 
 		if ( timedout )
-			__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
 	}
 
 	HASH_ITER(hh, session->timewait, item, tmp)
@@ -306,7 +288,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 		val = tv.tv_sec - item->last_activ.tv_sec;
 
 		if ( val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
-			__tcp_free_stream ( session , item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
 
 		sem_post ( &session->max_timewait );
 	}
@@ -391,11 +373,14 @@ void ntoh_tcp_free_session ( pntoh_tcp_session_t session )
 }
 
 /** @brief API to free a TCP stream (wrapper) **/
-void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , int reason , int extra )
+void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
+	if ( !stream || !(*stream) )
+		return;
+
 	lock_access( &session->lock );
 
-	lock_access( &stream->lock );
+	lock_access( &(*stream)->lock );
 	__tcp_free_stream ( session , stream , reason ,extra );
 
 	unlock_access(&session->lock);
@@ -416,8 +401,7 @@ void ntoh_tcp_exit( void )
 
 	unlock_access ( &params.lock );
 
-    pthread_cond_destroy( &params.lock.pcond );
-    pthread_mutex_destroy( &params.lock.mutex );
+	free_lockaccess ( &params.lock );
 
     params.init = 0;
 
@@ -942,8 +926,9 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 			HASH_DEL ( session->streams , stream );
 			sem_post ( &session->max_streams );
 
+			/* @todo free one element from timewait streams pool */
 			while ( sem_trywait ( &session->max_timewait ) != 0 )
-				__tcp_free_stream ( session , session->timewait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+				__tcp_free_stream ( session , &(session->timewait) , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
 
 			key = stream->key;
 			HASH_ADD_INT( session->timewait, key , stream );
@@ -1123,7 +1108,7 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     				((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
     		}else{
     			lock_access ( &session->lock );
-    			delete_stream ( session , stream , NTOH_REASON_SYNC , ret );
+    			delete_stream ( session , &stream , NTOH_REASON_SYNC , ret );
     			unlock_access ( &session->lock );
     		}
 
@@ -1140,7 +1125,7 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     		if ( stream->status == NTOH_STATUS_CLOSED )
     		{
     			lock_access ( &session->lock );
-    			__tcp_free_stream ( session , stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+    			__tcp_free_stream ( session , &stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
     			unlock_access ( &session->lock );
     			stream = 0;
     		}
@@ -1157,7 +1142,8 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	}
 
 exitp:
-	unlock_access ( &stream->lock );
+	if ( stream != 0 )
+		unlock_access ( &stream->lock );
 
 	return ret;
 }

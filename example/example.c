@@ -30,6 +30,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -182,10 +183,8 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 	size_t				size_tcp;
 	size_t				size_payload;
 	unsigned char		*payload;
-	unsigned char		*data;
 	int					ret;
-	int					error;
-	static int count = 0;
+	unsigned int		error;
 
 	size_ip = iphdr->ip_hl * 4;
 	total_len = ntohs( iphdr->ip_len );
@@ -241,12 +240,10 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 {
 	ntoh_ipv4_tuple4_t 	ipt4;
 	pntoh_ipv4_flow_t 	flow;
-	size_t 				size_ip;
 	size_t				total_len;
 	int 				ret;
-	int 				error;
+	unsigned int		error;
 
-	size_ip = iphdr->ip_hl * 4;
 	total_len = ntohs( iphdr->ip_len );
 
 	ipt4.destination = iphdr->ip_dst.s_addr;
@@ -270,10 +267,8 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 /* TCP Callback */
 void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tcp_peer_t dest , pntoh_tcp_segment_t seg , int reason , int extra )
 {
-	ppeer_info_t pinfo;
-
-	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %i) ---> " , ntoh_tcp_get_status ( stream->status ) , inet_ntoa( *(struct in_addr*) &orig->addr ) , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
-	fprintf ( stderr , "%s:%d (%s | Window: %i)\n\t" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
+	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %lu) ---> " , ntoh_tcp_get_status ( stream->status ) , inet_ntoa( *(struct in_addr*) &orig->addr ) , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
+	fprintf ( stderr , "%s:%d (%s | Window: %lu)\n\t" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
 
 	switch ( reason )
 	{
@@ -299,7 +294,7 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 
 		/* Data segment */
 		case NTOH_REASON_DATA:
-			fprintf ( stderr , "+ Data segment | Bytes: %i SEQ: %i ACK: %i Next SEQ: %i\n\t\t" , seg->payload_len , seg->seq , seg->ack , orig->next_seq );
+			fprintf ( stderr , "+ Data segment | Bytes: %i SEQ: %lu ACK: %lu Next SEQ: %lu\n\t\t" , seg->payload_len , seg->seq , seg->ack , orig->next_seq );
 
 			/* write data */
 			write_data( (ppeer_info_t) seg->user_data );
@@ -350,8 +345,8 @@ int main ( int argc , char *argv[] )
 	struct pcap_pkthdr 	header;
 
 	/* packet dissection */
-	struct ip	*ip;
-	int			error;
+	struct ip		*ip;
+	unsigned int	error;
 
 	/* extra */
 	unsigned int ipf,tcps;

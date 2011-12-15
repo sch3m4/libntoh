@@ -69,6 +69,7 @@ extern "C"
 #define NTOH_NO_WINDOW_SPACE_LEFT       	-22
 #define NTOH_NOT_TCP						-23
 #define NTOH_SYNCHRONIZING					-24
+#define NTOH_NOT_INITIALIZED				-25
 
 /* TCP streams reassembly notification cases values */
 #define NTOH_REASON_HSFAILED					1
@@ -93,6 +94,8 @@ extern "C"
 #define NTOH_ERROR_NOKEY			3
 #define NTOH_ERROR_NOFUNCTION		4
 #define NTOH_ERROR_INVALID_TUPLE4	5
+#define NTOH_ERROR_PARAMS			6
+#define NTOH_ERROR_INIT				7
 
 typedef struct
 {
@@ -102,6 +105,7 @@ typedef struct
 } ntoh_lock_t , *pntoh_lock_t;
 
 /** @brief Header files */
+#include "common.h"
 #include "tcpreassembly.h"
 #include "ipv4defrag.h"
 

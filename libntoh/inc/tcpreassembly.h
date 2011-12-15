@@ -38,8 +38,6 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 
-#include "uthash.h"
-
 /** @brief connection status **/
 enum _ntoh_tcp_status_
 {
@@ -161,11 +159,10 @@ typedef struct _tcp_stream_
 	///user-defined data linked to this stream
 	void *udata;
 	ntoh_lock_t	lock;
-	UT_hash_handle hh;
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
-typedef ntoh_tcp_stream_t tcprs_streams_table_t;
-typedef pntoh_tcp_stream_t ptcprs_streams_table_t;
+typedef htable_t tcprs_streams_table_t;
+typedef phtable_t ptcprs_streams_table_t;
 
 /** @brief TCP session data **/
 typedef struct _tcp_session_
@@ -175,7 +172,6 @@ typedef struct _tcp_session_
         /* max. streams */
         sem_t max_streams;
         sem_t max_timewait;
-        unsigned int table_size;
 
         /* connections hash table */
         ptcprs_streams_table_t streams;

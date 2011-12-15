@@ -34,7 +34,7 @@
  * @version 0.4a
  */
 
-#include "libntoh.h"
+#include <libntoh.h>
 
 #define VERSION "0.4a"
 
@@ -67,7 +67,8 @@ static const char retval_descriptions[][48] =
 		"Max. SYN/ACK retries reached" ,
 		"No TCP window space left",
 		"Not a TCP segment",
-		"Synchronizing connection"
+		"Synchronizing connection",
+		"Library not initialized"
 };
 
 /** @brief reason description strings **/
@@ -98,7 +99,9 @@ static const char api_errors[][25] = {
 		"No space for add streams",
 		"Null key",
 		"Invalid function pointer",
-		"Invalid tuple4 field(s)"
+		"Invalid tuple4 field(s)",
+		"Invalid parameter(s)",
+		"Library not initialized"
 };
 
 const char* ntoh_version ( void )
@@ -110,7 +113,7 @@ const char* ntoh_get_retval_desc ( int val )
 {
 	unsigned int pos = (unsigned int)(val * (-1));
 
-	if ( pos > 24 )
+	if ( pos > 25 )
 		return 0;
 
 	return retval_descriptions[pos];
@@ -126,7 +129,7 @@ const char* ntoh_get_reason ( unsigned int val )
 
 const char* ntoh_get_errdesc ( unsigned int val )
 {
-	if ( val > 5 )
+	if ( val > 7 )
 		return 0;
 
 	return api_errors[val];

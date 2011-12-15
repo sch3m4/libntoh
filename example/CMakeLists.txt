@@ -17,7 +17,7 @@ SET ( CMAKE_BUILD_TYPE Release )
 
 # set source files and flags
 SET ( LIBNTOHEXAMPLE_SRCS example.c )
-SET ( CMAKE_CXX_FLAGS "-Wall -Os -O2 -lpcap" )
+SET ( CMAKE_C_FLAGS "-Wall -Os -O2 -lpcap" )
 
 # set target from source
 ADD_EXECUTABLE ( ntohexample ${LIBNTOHEXAMPLE_SRCS} )

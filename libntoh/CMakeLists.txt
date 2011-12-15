@@ -3,7 +3,7 @@ PROJECT ( LIBNTOH )
 
 # set source files and flags
 SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c common.c )
-SET ( CMAKE_CXX_FLAGS "-Wall -Os -O2 -ansi -pedantic -pipe -fPIC" )
+SET ( CMAKE_C_FLAGS "-Wall -Os -O2 -pipe -fPIC" )
 SET ( LIBNTOH_INC inc )
 
 # set project version
@@ -36,6 +36,6 @@ TARGET_LINK_LIBRARIES( ${OUTPUT_LIB} ${CMAKE_THREAD_LIBS_INIT})
 # library
 INSTALL ( TARGETS ${OUTPUT_LIB} LIBRARY DESTINATION lib )
 # headers
-INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTOH_INC}/ipv4defrag.h ${LIBNTOH_INC}/uthash.h DESTINATION include/libntoh )
+INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTOH_INC}/ipv4defrag.h ${LIBNTOH_INC}/common.h DESTINATION include/libntoh )
 # pkconfig file
 INSTALL ( FILES ${CMAKE_CURRENT_BINARY_DIR}/ntoh.pc DESTINATION lib/pkgconfig)

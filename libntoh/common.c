@@ -28,9 +28,178 @@
  * POSSIBILITY OF SUCH DAMAGE.                                                  *
  ********************************************************************************/
 
-#include <pthread.h>
-#include "common.h"
+#include <stdlib.h>
+#include <libntoh.h>
 
+/****************/
+/** HASH TABLE **/
+/****************/
+/* map the hash table */
+_HIDDEN phtable_t htable_map ( size_t size )
+{
+	phtable_t ret = 0;
+
+	if ( !size )
+		return 0;
+
+	ret = (phtable_t) calloc ( 1 , sizeof ( htable_t ) );
+	ret->table = (phtnode_t*) calloc ( size , sizeof ( phtnode_t ) );
+	ret->table_size = size;
+
+	return ret;
+}
+
+/* insert a pair key-value into the hash table */
+_HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val )
+{
+	phtnode_t node = 0;
+	phtnode_t aux = 0;
+	unsigned int index = 0;
+
+	if ( !ht || !val )
+		return 0;
+
+	node = (phtnode_t) calloc ( 1 , sizeof ( htnode_t ) );
+	node->key = key;
+	node->val = val;
+
+	index = key % ht->table_size;
+
+	if ( ht->table[index] == NULL )
+	{
+		ht->table[index] = node;
+		return 1;
+	}
+
+	/* collision resolution by chaining */
+	aux = ht->table[index];
+	while ( aux->next != 0 )
+		aux = aux->next;
+
+	aux->next = node;
+
+	return 1;
+}
+
+/* returns the value associated to the given key */
+_HIDDEN void *htable_find ( phtable_t ht , unsigned int key )
+{
+	unsigned int index = 0;
+	phtnode_t node = 0;
+
+	if ( !ht )
+		return 0;
+
+	index = key % ht->table_size;
+
+	node = ht->table[index];
+	while ( node != 0 && node->key != key )
+		node = node->next;
+
+	if ( !node )
+		return 0;
+
+	return node->val;
+}
+
+/* removes a key-value pair from the hash table */
+_HIDDEN void *htable_remove ( phtable_t ht , unsigned int key )
+{
+	unsigned int index = 0;
+	phtnode_t node = 0;
+	phtnode_t aux = 0;
+	void *ret = 0;
+
+	if ( !ht )
+		return 0;
+
+	index = key % ht->table_size;
+	node = ht->table[index];
+
+	if ( node->key == key )
+		ht->table[index] = node->next;
+	else{
+		while ( node->next != 0 && node->next->key != key )
+			node = node->next;
+
+		if ( node->next != 0 )
+		{
+			aux = node;
+			node = node->next;
+			aux->next = node->next;
+		}
+	}
+
+	if ( !node )
+		return 0;
+
+	ret = node->val;
+	free ( node );
+
+	return ret;
+}
+
+/* count the key-value pairs in a hash table */
+_HIDDEN unsigned int htable_count ( phtable_t ht )
+{
+	unsigned int i = 0;
+	unsigned int ret = 0;
+	phtnode_t aux = 0;
+
+	if ( !ht )
+		return ret;
+
+	for ( i = 0 ; i < ht->table_size ; i++ )
+		for ( aux = ht->table[i] ; aux != 0 ; ret++ , aux = aux->next );
+
+	return ret;
+}
+
+/* gets the first key in a hash table */
+_HIDDEN unsigned int htable_first ( phtable_t ht )
+{
+	unsigned int ret = 0;
+	unsigned int i = 0;
+
+	if ( ! ht )
+		return ret;
+
+	for ( i = 0 ; i < ht->table_size && ht->table[i] == 0 ; i++ );
+
+	if ( i < ht->table_size )
+		ret = ht->table[i]->key;
+
+	return ret;
+}
+
+/* destroys entire hash table */
+_HIDDEN void htable_destroy ( phtable_t *ht )
+{
+	unsigned int i = 0;
+	phtnode_t aux = 0;
+
+	if ( !ht || !(*ht) )
+		return;
+
+	for ( i = 0 ; i < (*ht)->table_size ; i++ )
+		while ( (*ht)->table[i] != 0 )
+		{
+			aux = (*ht)->table[i]->next;
+			free ( (*ht)->table[i] );
+			(*ht)->table[i] = aux;
+		}
+
+	free ( (*ht)->table );
+	free ( *ht );
+
+	*ht = 0;
+
+	return;
+}
+
+/********************/
+/** ACCESS LOCKING **/
+/********************/
 _HIDDEN void lock_access ( pntoh_lock_t lock )
 {
 	pthread_mutex_lock( &lock->mutex );

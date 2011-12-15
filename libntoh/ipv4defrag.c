@@ -31,11 +31,11 @@
 #define __FAVOR_BSD
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <netinet/ip.h>
 #include <sys/time.h>
-
-#include "common.h"
+#include <libntoh.h>
 
 static struct
 {
@@ -51,25 +51,30 @@ inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pn
 {
 	ntoh_ipv4_key_t ret = 0;
 
-	if ( !tuple4 )
+	if ( !tuple4 || !session )
 		return ret;
 
 	ret = tuple4->source ^ tuple4->destination;
 	ret ^= ( ret >> 16 ) ^ tuple4->id;
 	ret ^= ( ret >> 8 ) ^ tuple4->protocol;
-	ret &= session->table_size - 1;
+	ret &= session->flows->table_size - 1;
 
 	return ret;
 }
 
 pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
-	ntoh_ipv4_key_t key = ip_get_hashkey( session , tuple4 );
+	ntoh_ipv4_key_t key = 0;
 	pntoh_ipv4_flow_t ret = 0;
+
+	if ( !params.init || !session || !tuple4 )
+		return ret;
+
+	key = ip_get_hashkey( session , tuple4 );
 
 	lock_access( &session->lock );
 
-	HASH_FIND_INT( session->flows, &key, ret );
+	ret = htable_find ( session->flows , key );
 
 	unlock_access( &session->lock );
 
@@ -79,35 +84,46 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
 pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 , pipv4_dfcallback_t function , void *udata , unsigned int *error)
 {
 	pntoh_ipv4_flow_t ret = 0;
-	ntoh_ipv4_key_t key = ip_get_hashkey( session , tuple4 );
 
-	if ( !key || !function )
+	if ( !params.init )
+	{
+		if ( error != 0 )
+			*error = NTOH_ERROR_INIT;
 		return ret;
+	}
+
+	if ( !session || !tuple4 || !function )
+	{
+		if ( error != 0 )
+			*error = NTOH_ERROR_PARAMS;
+		return ret;
+	}
 
 	if ( sem_trywait( &session->max_flows ) != 0 )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_NOSPACE;
-		return 0;
+
+		return ret;
 	}
 
 	if ( !( ret = (pntoh_ipv4_flow_t) calloc( 1, sizeof(ntoh_ipv4_flow_t) ) ) )
-		return 0;
+		return ret;
 
 	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv4_tuple4_t) );
-	ret->key = key;
+	ret->key = ip_get_hashkey( session , tuple4 );
 
 	gettimeofday( &ret->last_activ, 0 );
 	ret->function = (void*) function;
 	ret->udata = udata;
 
-	session->lock.use = 0;
-	pthread_mutex_init ( &session->lock.mutex , 0 );
-	pthread_cond_init ( &session->lock.pcond , 0 );
+	ret->lock.use = 0;
+	pthread_mutex_init ( &ret->lock.mutex , 0 );
+	pthread_cond_init ( &ret->lock.pcond , 0 );
 
 	lock_access( &session->lock );
 
-	HASH_ADD_INT( session->flows, key, ret );
+	htable_insert ( session->flows , ret->key , ret );
 
 	unlock_access( &session->lock );
 
@@ -120,7 +136,6 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 /* insert a new fragment */
 inline static pntoh_ipv4_fragment_t insert_fragment ( pntoh_ipv4_fragment_t list , pntoh_ipv4_fragment_t frag )
 {
-	pntoh_ipv4_fragment_t tmp = 0;
 	pntoh_ipv4_fragment_t aux = list;
 
 	if ( !aux )
@@ -165,9 +180,9 @@ inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pnt
 {
 	pntoh_ipv4_fragment_t 	tmp;
 	pntoh_ipv4_fragment_t 	fragment;
-	struct ip			*iphdr;
-	unsigned int		offsethdr;
-	unsigned char 		*ret;
+	struct ip				*iphdr;
+	unsigned int			offsethdr;
+	unsigned char 			*ret;
 
 	fragment = flow->fragments;
 	iphdr = flow->final_iphdr;
@@ -218,11 +233,11 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	( (pipv4_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	HASH_DEL( session->flows ,item );
+	htable_remove ( session->flows , item->key );
 
 	sem_post( &session->max_flows );
 
-	free_lockaccess ( &session->lock );
+	free_lockaccess ( &item->lock );
 
 	free( item );
 
@@ -233,7 +248,7 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 
 void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason )
 {
-	if ( !flow || !(*flow) )
+	if ( !params.init || !flow || !(*flow) )
 		return;
 
 	lock_access( &session->lock );
@@ -256,6 +271,12 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	unsigned long flen = 0;
 	int				ret = NTOH_OK;
 	pntoh_ipv4_fragment_t frag = 0;
+
+	if ( !params.init )
+		return NTOH_NOT_INITIALIZED;
+
+	if ( !session )
+		return NTOH_INCORRECT_SESSION;
 
 	if ( !flow )
 		return NTOH_IP_INCORRECT_FLOW;
@@ -348,6 +369,7 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	/* if there are no holes */
 	if ( flow->final_iphdr != 0 && flow->total == flow->meat )
 	{
+
 		lock_access ( &session->lock );
 		__ipv4_free_flow ( session , &flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
 		unlock_access ( &session->lock );
@@ -355,7 +377,9 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 		gettimeofday( &flow->last_activ, 0 );
 
 exitp:
-	unlock_access ( &flow->lock );
+	if ( flow != 0 )
+		unlock_access ( &flow->lock );
+
 	return ret;
 }
 
@@ -363,9 +387,12 @@ unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session )
 {
 	unsigned int ret = 0;
 
+	if ( !params.init )
+		return ret;
+
 	lock_access( &params.lock );
 
-	ret = HASH_COUNT ( session->flows );
+	ret = htable_count ( session->flows );
 
 	unlock_access( &params.lock );
 
@@ -374,19 +401,35 @@ unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session )
 
 inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 {
-	struct timeval	tv = { 0 , 0 };
-	unsigned int	val = 0;
+	struct timeval		tv = { 0 , 0 };
 	pntoh_ipv4_flow_t	item;
-	pntoh_ipv4_flow_t	tmp;
+	unsigned int		i = 0;
+	phtnode_t			node = 0;
+	phtnode_t			prev = 0;
 
 	lock_access( &session->lock );
 
-	gettimeofday ( &tv , 0 );
+	/* handly iterates between flows */
+	for ( i = 0 ; i < session->flows->table_size ; i++ )
+	{
+		gettimeofday ( &tv , 0 );
+		node = prev = session->flows->table[i];
+		while ( node != 0 )
+		{
+			item = (pntoh_ipv4_flow_t) node->val;
 
-	HASH_ITER(hh, session->flows, item, tmp)
-		/* timeout expired */
-		if ( DEFAULT_IPV4_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
-			__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT );
+			/* timeout expired */
+			if ( DEFAULT_IPV4_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
+			{
+				lock_access ( &item->lock );
+				__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT );
+				node = prev;
+			}else{
+				prev = node;
+				node = node->next;
+			}
+		}
+	}
 
 	unlock_access( &session->lock );
 
@@ -424,15 +467,13 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-
-	session->table_size = max_flows;
+	session->flows = htable_map (max_flows );
 	sem_init ( &session->max_flows , 0 , max_flows );
 	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );
 	pthread_cond_init ( &session->lock.pcond , 0 );
-	pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
 
-	max_fragments = max_mem % sizeof ( ntoh_ipv4_fragment_t );
+	max_fragments = (int)(max_mem / sizeof ( ntoh_ipv4_fragment_t ));
 	if ( !max_fragments )
 		max_fragments = DEFAULT_IPV4_MAX_FRAGMENTS;
 
@@ -451,14 +492,19 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 	if ( error != 0 )
 		*error = NTOH_OK;
 
+	pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
+
 	return session;
 }
 
 inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 {
+	ntoh_ipv4_key_t	first = 0;
 	pntoh_ipv4_session_t ptr = 0;
 	pntoh_ipv4_flow_t item = 0;
-	pntoh_ipv4_flow_t tmp = 0;
+
+	if ( !session )
+		return;
 
 	if ( params.sessions_list == session )
 		params.sessions_list = session->next;
@@ -467,15 +513,19 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 
 		if ( ptr != 0 )
 			ptr->next = session->next;
+		else
+			return;
 	}
 
 	lock_access( &session->lock );
-	HASH_ITER ( hh , session->flows , item , tmp )
+
+	while ( ( first = htable_first ( session->flows ) ) != 0 )
 	{
 		lock_access ( &item->lock );
 		__ipv4_free_flow ( session , &item , NTOH_REASON_EXIT );
 	}
-	unlock_access( &session->lock );
+
+	htable_destroy ( &(session->flows) );
 
 	pthread_cancel ( session->tID );
 	pthread_join ( session->tID , 0 );
@@ -491,7 +541,7 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 
 void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session )
 {
-	if ( !session )
+	if ( !params.init || !session )
 		return;
 
 	lock_access ( &params.lock );

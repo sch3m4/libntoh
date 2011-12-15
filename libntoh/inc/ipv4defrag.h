@@ -33,8 +33,6 @@
 
 #include <netinet/in.h>
 
-#include "uthash.h"
-
 /// macro to verify if an IP datagram is part of a fragmented datagram
 #define NTOH_IPV4_IS_FRAGMENT(off)			( ( (8*(ntohs(off) & 0x1FFF)) > 0 || (ntohs(off) & 0x2000) ) && !(ntohs(off) & 0x4000) )
 
@@ -88,12 +86,10 @@ typedef struct
 	/// user-defined data
 	void *udata;
 	ntoh_lock_t lock;
-	/// allows this struct to be indexed in a hash table
-	UT_hash_handle hh;
 } ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;
 
-typedef ntoh_ipv4_flow_t ipv4_flows_table_t;
-typedef pntoh_ipv4_flow_t pipv4_flows_table_t;
+typedef htable_t ipv4_flows_table_t;
+typedef phtable_t pipv4_flows_table_t;
 
 /** @brief Structure to store global parameters */
 typedef struct _ipv4_session_
@@ -103,7 +99,6 @@ typedef struct _ipv4_session_
 	/// max. number of IP flows
 	sem_t max_flows;
 	sem_t max_fragments;
-	unsigned int table_size;
 	/// hash table to store IP flows
 	pipv4_flows_table_t flows;
 	ntoh_lock_t lock;
@@ -128,7 +123,7 @@ typedef struct _ipv4_session_
 #endif
 
 #ifndef DEFAULT_IPV4_MAX_FRAGMENTS
-# define DEFAULT_IPV4_MAX_FRAGMENTS			((12*1024*1024) % sizeof(ntoh_ipv4_fragment_t))
+# define DEFAULT_IPV4_MAX_FRAGMENTS			((12*1024*1024) / sizeof(ntoh_ipv4_fragment_t))
 #endif
 
 typedef void(*pipv4_dfcallback_t) ( pntoh_ipv4_flow_t , pntoh_ipv4_tuple4_t , unsigned char* , size_t , unsigned short );

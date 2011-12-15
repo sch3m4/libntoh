@@ -30,10 +30,10 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
-
-#include "common.h"
+#include <libntoh.h>
 
 static struct
 {
@@ -73,7 +73,7 @@ inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tc
 	if ( !data )
 		return 0;
 
-	return ( ( ( data->sport & 0xFF ) | ( ( data->dport & 0xFF ) << 8 ) | ( ( data->source & 0xFF ) << 16 ) | ( ( data->destination & 0xFF ) << 24 ) ) & (session->table_size - 1) );
+	return ( ( ( data->sport & 0xFF ) | ( ( data->dport & 0xFF ) << 8 ) | ( ( data->source & 0xFF ) << 16 ) | ( ( data->destination & 0xFF ) << 24 ) ) & (session->streams->table_size - 1) );
 }
 
 /** @brief Sends the given segment to the user **/
@@ -128,7 +128,6 @@ inline static void flush_peer_queues ( pntoh_tcp_session_t session , pntoh_tcp_s
 /** @brief Remove the stream from the session streams hash table, and notify the user **/
 inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
-	pntoh_tcp_stream_t aux = 0;
 	pntoh_tcp_stream_t item = 0;
 
 	if ( !stream || !(*stream) )
@@ -138,22 +137,18 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 
 	if ( session->streams != 0 )
 	{
-		HASH_FIND_INT(session->streams , &(item->key) , aux );
-
-		if ( aux != 0 )
+		if ( htable_find ( session->streams, item->key ) != 0 )
 		{
-			HASH_DEL ( session->streams , item );
+			htable_remove ( session->streams , item->key );
 			sem_post ( &session->max_streams );
 		}
 	}
 
 	if ( session->timewait != 0 )
 	{
-		aux = 0;
-		HASH_FIND_INT ( session->timewait , &(item->key) , aux );
-		if ( aux != 0 )
+		if ( htable_find ( session->timewait, item->key ) != 0 )
 		{
-			HASH_DEL ( session->timewait , item );
+			htable_remove ( session->timewait , item->key );
 			sem_post ( &session->max_timewait );
 		}
 	}
@@ -196,8 +191,8 @@ inline static void __tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_s
 inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 {
 	pntoh_tcp_session_t ptr = 0;
-	pntoh_tcp_stream_t item = 0;
-	pntoh_tcp_stream_t tmp = 0;
+	pntoh_tcp_stream_t 	item = 0;
+	ntoh_tcp_key_t		first = 0;
 
 	if ( params.sessions_list == session )
 		params.sessions_list = session->next;
@@ -210,15 +205,15 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	lock_access( &session->lock );
 
-	HASH_ITER ( hh , session->streams , item , tmp )
+	while ( ( first = htable_first ( session->timewait ) ) != 0 )
 	{
-		lock_access( &item->lock );
+		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
-	HASH_ITER ( hh , session->timewait , item , tmp )
+	while ( ( first = htable_first ( session->streams ) ) != 0 )
 	{
-		lock_access( &item->lock );
+		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
@@ -231,6 +226,9 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	free_lockaccess ( &session->lock );
 
+	htable_destroy ( &session->streams );
+	htable_destroy ( &session->timewait );
+
     free ( session );
 
     return;
@@ -242,55 +240,84 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 
 	struct timeval		tv = { 0 , 0 };
 	unsigned int		val = 0;
+	unsigned int		i = 0;
 	unsigned short		timedout = 0;
 	pntoh_tcp_stream_t	item;
-	pntoh_tcp_stream_t	tmp;
+	phtnode_t			node = 0;
+	phtnode_t			prev = 0;
 
 	lock_access( &session->lock );
 
-	HASH_ITER(hh, session->streams, item, tmp)
+	/* handly iterates between flows */
+	for ( i = 0 ; i < session->streams->table_size ; i++ )
 	{
-		timedout = 0;
-		gettimeofday ( &tv , 0 );
-		val = tv.tv_sec - item->last_activ.tv_sec;
-		switch ( item->status )
+		node = prev = session->streams->table[i];
+		while ( node != 0 )
 		{
-			case NTOH_STATUS_SYNSENT:
-				if ( val > DEFAULT_TCP_SYNSENT_TIMEOUT )
-					timedout = 1;
-				break;
+			timedout = 0;
+			gettimeofday ( &tv , 0 );
+			item = (pntoh_tcp_stream_t) node->val;
+			val = tv.tv_sec - item->last_activ.tv_sec;
 
-			case NTOH_STATUS_SYNRCV:
-				if ( val > DEFAULT_TCP_SYNRCV_TIMEOUT )
-					timedout = 1;
-				break;
+			switch ( item->status )
+			{
+				case NTOH_STATUS_SYNSENT:
+					if ( val > DEFAULT_TCP_SYNSENT_TIMEOUT )
+						timedout = 1;
+					break;
 
-			case NTOH_STATUS_ESTABLISHED:
-				if ( val > DEFAULT_TCP_ESTABLISHED_TIMEOUT )
-					timedout = 1;
-				break;
+				case NTOH_STATUS_SYNRCV:
+					if ( val > DEFAULT_TCP_SYNRCV_TIMEOUT )
+						timedout = 1;
+					break;
 
-			case NTOH_STATUS_CLOSING:
-				if ( IS_FINWAIT2(item->client,item->server) && val < DEFAULT_TCP_FINWAIT2_TIMEOUT )
-					timedout = 1;
-				else if ( IS_TIMEWAIT(item->client,item->server) && val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )
-					timedout = 1;
-				break;
+				case NTOH_STATUS_ESTABLISHED:
+					if ( val > DEFAULT_TCP_ESTABLISHED_TIMEOUT )
+						timedout = 1;
+					break;
+
+				case NTOH_STATUS_CLOSING:
+					if ( IS_FINWAIT2(item->client,item->server) && val < DEFAULT_TCP_FINWAIT2_TIMEOUT )
+						timedout = 1;
+					else if ( IS_TIMEWAIT(item->client,item->server) && val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+						timedout = 1;
+					break;
+			}
+
+			/* timeout expired */
+			if ( timedout )
+			{
+				lock_access ( &item->lock );
+				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+				node = prev;
+			}else{
+				prev = node;
+				node = node->next;
+			}
 		}
-
-		if ( timedout )
-			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
 	}
 
-	HASH_ITER(hh, session->timewait, item, tmp)
+	/* handly iterates between flows */
+	for ( i = 0 ; i < session->timewait->table_size ; i++ )
 	{
-		gettimeofday ( &tv , 0 );
-		val = tv.tv_sec - item->last_activ.tv_sec;
+		node = prev = session->timewait->table[i];
+		while ( node != 0 )
+		{
+			item = (pntoh_tcp_stream_t) node->val;
 
-		if ( val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
-			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+			gettimeofday ( &tv , 0 );
+			val = tv.tv_sec - item->last_activ.tv_sec;
 
-		sem_post ( &session->max_timewait );
+			if ( val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+			{
+				lock_access ( &item->lock );
+				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+				node = prev;
+			}else{
+				prev = node;
+				node = node->next;
+			}
+		}
 	}
 
 	unlock_access( &session->lock );
@@ -301,6 +328,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 static void *timeouts_thread ( void *p )
 {
 	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );
+
 
 	while ( 1 )
 	{
@@ -332,13 +360,15 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 		return 0;
 	}
 
-	session->table_size = max_streams;
+	session->streams = htable_map ( max_streams );
+	session->timewait = htable_map ( max_timewait );
+
 	sem_init ( &session->max_streams , 0 , max_streams );
 	sem_init ( &session->max_timewait , 0 , max_timewait );
+
 	session->lock.use = 0;
     pthread_mutex_init( &session->lock.mutex, 0 );
     pthread_cond_init( &session->lock.pcond, 0 );
-    pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
 
     ntoh_tcp_init();
 
@@ -352,6 +382,8 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 
     if ( error != 0 )
     	*error = NTOH_OK;
+
+    pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
 
 	return session;
 }
@@ -432,9 +464,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 	lock_access( &session->lock );
 
-	HASH_FIND_INT( session->streams, &key, ret );
-
-	if ( !ret )
+	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key ) ) )
 	{
 		tuplerev.destination = tuple4->source;
 		tuplerev.source = tuple4->destination;
@@ -443,7 +473,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 		key = tcp_getkey( session , &tuplerev );
 
-		HASH_FIND_INT( session->streams, &key, ret );
+		ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key );
 	}
 
 	unlock_access( &session->lock );
@@ -513,7 +543,8 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
     pthread_mutex_init( &stream->lock.mutex, 0 );
     pthread_cond_init( &stream->lock.pcond, 0 );
 
-	HASH_ADD_INT( session->streams, key, stream );
+	htable_insert ( session->streams , key , stream );
+
 	unlock_access( &session->lock );
 
 	if ( error != 0 )
@@ -529,7 +560,7 @@ unsigned int ntoh_tcp_count_streams ( pntoh_tcp_session_t session )
 
 	lock_access( &session->lock );
 
-	ret = HASH_COUNT ( session->streams );
+	ret = htable_count ( session->streams );
 
 	unlock_access( &session->lock );
 	return ret;
@@ -919,19 +950,19 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	/* should we add this stream to TIMEWAIT queue? */
 	if ( stream->status == NTOH_STATUS_CLOSING && IS_TIMEWAIT(stream->client , stream->server) )
 	{
-		HASH_FIND_INT( session->timewait, &(stream->key), twait );
-
-		if ( !twait )
+		if ( ! htable_find ( session->timewait , stream->key ) )
 		{
-			HASH_DEL ( session->streams , stream );
+			htable_remove ( session->streams , stream->key );
 			sem_post ( &session->max_streams );
 
-			/* @todo free one element from timewait streams pool */
 			while ( sem_trywait ( &session->max_timewait ) != 0 )
-				__tcp_free_stream ( session , &(session->timewait) , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+			{
+				key = htable_first ( session->timewait );
+				twait = htable_remove ( session->timewait , key );
+				__tcp_free_stream ( session , &twait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+			}
 
-			key = stream->key;
-			HASH_ADD_INT( session->timewait, key , stream );
+			htable_insert ( session->timewait , stream->key , stream );
 		}
 	}
 

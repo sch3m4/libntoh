@@ -31,18 +31,41 @@
  * POSSIBILITY OF SUCH DAMAGE.                                                  *
  ********************************************************************************/
 
-#include <libntoh.h>
-
 #ifndef _HIDDEN
 # define _HIDDEN __attribute__((visibility("hidden")))
 # endif
 
+/* linked list */
+typedef struct _hash_node_
+{
+	struct _hash_node_	*next;
+	void				*val;
+	unsigned int		key;
+} htnode_t , *phtnode_t;
+
+/* hash table definition */
+typedef struct
+{
+	size_t	table_size;
+	phtnode_t *table;
+} htable_t , *phtable_t;
+
+/******************************************************************/
+/** Hash Table implementation (collision resolution by chaining) **/
+/******************************************************************/
+_HIDDEN phtable_t htable_map ( size_t size );
+_HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val );
+_HIDDEN void *htable_find ( phtable_t ht , unsigned int key );
+_HIDDEN void *htable_remove ( phtable_t ht , unsigned int key );
+_HIDDEN unsigned int htable_count ( phtable_t ht );
+_HIDDEN unsigned int htable_first ( phtable_t ht );
+_HIDDEN void htable_destroy ( phtable_t *ht );
+
+
 /** @brief Access locking **/
 _HIDDEN void lock_access ( pntoh_lock_t lock );
-
 /** @brief Access unlocking **/
 _HIDDEN void unlock_access ( pntoh_lock_t lock );
-
 _HIDDEN void free_lockaccess ( pntoh_lock_t lock );
 
 #endif /* __LIBNTOH_COMMON_H__ */

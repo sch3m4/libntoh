@@ -1,4 +1,12 @@
+libntoh (0.4a)
+
+	* Self implementation of hash tables (collision resolution by chaining)
+	* Fixed a MAJOR bug in IPv4 defragmentation (deadlock
+	
+	-- Chema Garcia <sch3m4@opensec.es> (xx/xx/20xx)
+
 libntoh (0.3a)
+
 	* TCP reassembly has been totally rewritten
 	* Added IPv4 defragmentation
 	

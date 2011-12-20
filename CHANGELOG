@@ -1,7 +1,8 @@
 libntoh (0.4a)
 
 	* Self implementation of hash tables (collision resolution by chaining)
-	* Fixed a MAJOR bug in IPv4 defragmentation (deadlock
+	* Fixed a MAJOR bug in IPv4 defragmentation (deadlock)
+	* Fixed a bug in IPv4 defragmentation when building the complete datagram (now using flow->total instead of flow->meat to allocate the memory. In some scenarios may cause segfault)
 	
 	-- Chema Garcia <sch3m4@opensec.es> (xx/xx/20xx)
 

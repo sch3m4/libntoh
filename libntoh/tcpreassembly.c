@@ -205,14 +205,17 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	lock_access( &session->lock );
 
+
 	while ( ( first = htable_first ( session->timewait ) ) != 0 )
 	{
+		item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
 	while ( ( first = htable_first ( session->streams ) ) != 0 )
 	{
+		item = (pntoh_tcp_stream_t)htable_remove(session->streams,first);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
@@ -248,7 +251,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 
 	lock_access( &session->lock );
 
-	/* handly iterates between flows */
+	/* iterating manually between flows */
 	for ( i = 0 ; i < session->streams->table_size ; i++ )
 	{
 		node = prev = session->streams->table[i];
@@ -328,7 +331,6 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 static void *timeouts_thread ( void *p )
 {
 	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );
-
 
 	while ( 1 )
 	{

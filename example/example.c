@@ -355,9 +355,9 @@ int main ( int argc , char *argv[] )
 	fprintf( stderr, "\n# ----------------------- #" );
 	fprintf( stderr, "\n# Written by Chema Garcia #" );
 	fprintf( stderr, "\n# ----------------------- #" );
-	fprintf( stderr, "\n#    http://opensec.es    #" );
-	fprintf( stderr, "\n#    sch3m4@opensec.es    #" );
-	fprintf( stderr, "\n#    sch3m4@brutalsec.net #" );
+	fprintf( stderr, "\n#  http://safetybits.net  #" );
+	fprintf( stderr, "\n#   chema@safetybits.net  #" );
+	fprintf( stderr, "\n#   sch3m4@brutalsec.net  #" );
 	fprintf( stderr, "\n###########################\n" );
 
 	fprintf( stderr, "\n[i] libntoh version: %s\n", ntoh_version() );

@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2011, Chema Garcia                                             *
+ * Copyright (c) 2012, Chema Garcia                                             *
  * All rights reserved.                                                         *
  *                                                                              *
  * Redistribution and use in source and binary forms, with or                   *
@@ -29,8 +29,8 @@
  ********************************************************************************/
 
 /**
- * @author Chema Garcia (aka sch3m4) <sch3m4@opensec.es || sch3m4@brutalsec.net>
- * @mainpage https://code.google.com/p/libntoh/
+ * @author Chema Garcia (aka sch3m4) <chema@safetybits.net || sch3m4@brutalsec.net>
+ * @mainpage https://github.com/sch3m4/libntoh/
  * @version 0.4a
  */
 

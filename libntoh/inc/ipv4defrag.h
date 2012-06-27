@@ -2,7 +2,7 @@
 # define __LIBNTOH_IPDF__
 
 /********************************************************************************
- * Copyright (c) 2011, Chema Garcia                                             *
+ * Copyright (c) 2012, Chema Garcia                                             *
  * All rights reserved.                                                         *
  *                                                                              *
  * Redistribution and use in source and binary forms, with or                   *
@@ -106,8 +106,8 @@ typedef struct _ipv4_session_
 	pthread_t tID;
 }ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
 
-#ifndef MIN_FRAGMENT_LENGTH
-# define MIN_FRAGMENT_LENGTH	562 /* min. PMTU */
+#ifndef MIN_IPV4_FRAGMENT_LENGTH
+# define MIN_IPV4_FRAGMENT_LENGTH	576 /* min. PMTU */
 #endif
 
 #ifndef MAX_DATAGRAM_LENGTH

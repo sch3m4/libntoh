@@ -77,12 +77,12 @@ Linking C executable ntohexample
 # ----------------------- #
 # Written by Chema Garcia #
 # ----------------------- #
-#    http://opensec.es    #
-#    sch3m4@opensec.es    #
-#    sch3m4@brutalsec.net #
+#  http://safetybits.net  #
+#  sch3m4@safetybits.net  #
+#  sch3m4@brutalsec.net   #
 ###########################
 
-[i] libntoh version: 0.3a
+[i] libntoh version: 0.4a
 
 [+] Usage: ./ntohexample <options>
 

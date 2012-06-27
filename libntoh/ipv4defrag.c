@@ -1,5 +1,5 @@
 /********************************************************************************
- * Copyright (c) 2011, Chema Garcia                                             *
+ * Copyright (c) 2012, Chema Garcia                                             *
  * All rights reserved.                                                         *
  *                                                                              *
  * Redistribution and use in source and binary forms, with or                   *
@@ -322,7 +322,7 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	}
 
 	/* checks if the fragment is hand crafted */
-	if ( IS_SET(flags,IP_MF) && data_len < MIN_FRAGMENT_LENGTH )
+	if ( IS_SET(flags,IP_MF) && data_len < MIN_IPV4_FRAGMENT_LENGTH )
 	{
 		ret = NTOH_TOO_LOW_IP_FRAGMENT_LENGTH;
 		goto exitp;

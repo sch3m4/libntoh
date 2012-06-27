@@ -4,7 +4,7 @@ libntoh (0.4a)
 	* Fixed a MAJOR bug in IPv4 defragmentation (deadlock)
 	* Fixed a bug in IPv4 defragmentation when building the complete datagram (now using flow->total instead of flow->meat to allocate the memory. In some scenarios may cause segfault)
 	
-	-- Chema Garcia <sch3m4@opensec.es> (xx/xx/20xx)
+	-- Chema Garcia <chema@safetybits.net> (xx/xx/20xx)
 
 libntoh (0.3a)
 

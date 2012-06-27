@@ -2,7 +2,7 @@
 # define __LIBNTOH_COMMON_H__
 
 /********************************************************************************
- * Copyright (c) 2011, Chema Garcia                                             *
+ * Copyright (c) 2012, Chema Garcia                                             *
  * All rights reserved.                                                         *
  *                                                                              *
  * Redistribution and use in source and binary forms, with or                   *

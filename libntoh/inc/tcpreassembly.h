@@ -125,11 +125,11 @@ typedef struct
 	unsigned int sack;
 	///window scale factor
 	unsigned int wscale;
-	//total window size
+	///total window size
 	unsigned long totalwin;
-	// last ts
+	///last ts
 	unsigned int lastts;
-	// send peer segments to user?
+	///send peer segments to user?
 	unsigned short receive;
 } ntoh_tcp_peer_t, *pntoh_tcp_peer_t;
 

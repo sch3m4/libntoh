@@ -129,6 +129,8 @@ typedef struct
 	unsigned long totalwin;
 	// last ts
 	unsigned int lastts;
+	// send peer segments to user?
+	unsigned short receive;
 } ntoh_tcp_peer_t, *pntoh_tcp_peer_t;
 
 /** @brief connection data **/

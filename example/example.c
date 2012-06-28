@@ -57,10 +57,14 @@ typedef struct
 	char *path;
 } peer_info_t , *ppeer_info_t;
 
+#define RECV_CLIENT	1
+#define RECV_SERVER	2
+
 /* capture handle */
 pcap_t 					*handle = 0;
-pntoh_tcp_session_t		tcp_session;
-pntoh_ipv4_session_t	ipv4_session;
+pntoh_tcp_session_t		tcp_session = 0;
+pntoh_ipv4_session_t	ipv4_session = 0;
+unsigned short			receive = 0;
 
 /**
  * @brief Exit function (closes the capture handle and releases all resource from libntoh)
@@ -268,6 +272,17 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 /* TCP Callback */
 void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tcp_peer_t dest , pntoh_tcp_segment_t seg , int reason , int extra )
 {
+	/* receive data only from the peer given by the user */
+	if ( receive == RECV_CLIENT && stream->server.receive )
+	{
+		stream->server.receive = 0;
+		return;
+	}else if ( receive == RECV_SERVER && stream->client.receive )
+	{
+		stream->client.receive = 0;
+		return;
+	}
+
 	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %lu) ---> " , ntoh_tcp_get_status ( stream->status ) , inet_ntoa( *(struct in_addr*) &orig->addr ) , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
 	fprintf ( stderr , "%s:%d (%s | Window: %lu)\n\t" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
 
@@ -368,7 +383,9 @@ int main ( int argc , char *argv[] )
 		fprintf( stderr, "\n+ Options:" );
 		fprintf( stderr, "\n\t-i | --iface <val> -----> Interface to read packets from" );
 		fprintf( stderr, "\n\t-f | --file <val> ------> File path to read packets from" );
-		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (must contain \"tcp\" or \"ip\")\n\n" );
+		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (must contain \"tcp\" or \"ip\")" );
+		fprintf( stderr, "\n\t-c | --client ----------> Receive client data only");
+		fprintf( stderr, "\n\t-s | --server ----------> Receive server data only\n\n");
 		exit( 1 );
 	}
 
@@ -381,9 +398,11 @@ int main ( int argc , char *argv[] )
 		{ "iface" , 1 , 0 , 'i' } ,
 		{ "file" , 1 , 0 , 'f' } ,
 		{ "filter" , 1 , 0 , 'F' } ,
+		{ "client" , 0 , 0 , 'c' },
+		{ "server" , 0 , 0 , 's' },
 		{ 0 , 0 , 0 , 0 } };
 
-		if ( ( c = getopt_long( argc, argv, "i:f:F:", long_options, &option_index ) ) < 0 )
+		if ( ( c = getopt_long( argc, argv, "i:f:F:cs", long_options, &option_index ) ) < 0 )
 			break;
 
 		switch ( c )
@@ -401,8 +420,19 @@ int main ( int argc , char *argv[] )
 			case 'F':
 				filter = optarg;
 				break;
+
+			case 'c':
+				receive |= RECV_CLIENT;
+				break;
+
+			case 's':
+				receive |= RECV_SERVER;
+				break;
 		}
 	}
+
+	if ( !receive )
+		receive = (RECV_CLIENT | RECV_SERVER);
 
 	if ( !handle )
 	{
@@ -434,7 +464,21 @@ int main ( int argc , char *argv[] )
 	}
 
 	fprintf( stderr, "\n[i] Source: %s / %s", source, pcap_datalink_val_to_description( pcap_datalink( handle ) ) );
-	fprintf( stderr, "\n[i] Filter: %s\n", filter );
+	fprintf( stderr, "\n[i] Filter: %s", filter );
+
+	fprintf( stderr, "\n[i] Receive data from client: ");
+	if ( receive & RECV_CLIENT )
+		fprintf( stderr , "Yes");
+	else
+		fprintf( stderr , "No");
+
+	fprintf( stderr, "\n[i] Receive data from server: ");
+	if ( receive & RECV_SERVER )
+		fprintf( stderr , "Yes");
+	else
+		fprintf( stderr , "No");
+
+	fprintf ( stderr , "\n" );
 
 	ntoh_init ();
 
@@ -465,6 +509,7 @@ int main ( int argc , char *argv[] )
 		/* it is an IPv4 fragment */
 		if ( NTOH_IPV4_IS_FRAGMENT(ip->ip_off) )
 			send_ipv4_fragment ( ip , &ipv4_callback );
+		/* or a TCP segment */
 		else if ( ip->ip_p == IPPROTO_TCP )
 			send_tcp_segment ( ip , &tcp_callback );
 	}

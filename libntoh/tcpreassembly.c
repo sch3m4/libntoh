@@ -84,7 +84,9 @@ inline static void send_single_segment ( pntoh_tcp_session_t session , pntoh_tcp
 		origin->next_seq = segment->seq + segment->payload_len;
 
 	origin->totalwin += segment->payload_len;
-	((pntoh_tcp_callback_t) stream->function) ( stream , origin , destination , segment , reason , extra );
+
+	if ( origin->receive )
+		((pntoh_tcp_callback_t) stream->function) ( stream , origin , destination , segment , reason , extra );
 
 	if ( segment->flags & ( TH_FIN | TH_RST ) )
 	{
@@ -168,7 +170,8 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 			break;
 	}
 
-	((pntoh_tcp_callback_t)item->function)(item,&item->client, &item->server,0, reason , extra );
+	if ( item->client.receive )
+		((pntoh_tcp_callback_t)item->function)(item,&item->client, &item->server,0, reason , extra );
 
     free_lockaccess ( &item->lock );
 
@@ -535,6 +538,8 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->client.port = stream->tuple.sport;
 	stream->server.addr = stream->tuple.destination;
 	stream->server.port = stream->tuple.dport;
+	stream->client.receive = 1;
+	stream->server.receive = 1;
 
 	gettimeofday( &stream->last_activ, 0 );
 	stream->status = stream->client.status = stream->server.status = NTOH_STATUS_CLOSED;
@@ -946,7 +951,7 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 
 	free ( segment );
 
-	if ( stream->status != NTOH_STATUS_CLOSED )
+	if ( stream->status != NTOH_STATUS_CLOSED && origin->receive )
 		((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , 0 );
 
 	/* should we add this stream to TIMEWAIT queue? */
@@ -1135,10 +1140,13 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     		ret = handle_new_connection ( stream , tcp , origin ,  destination , udata );
     		if ( ret == NTOH_OK )
     		{
-    			if ( stream->status == NTOH_STATUS_ESTABLISHED )
-    				((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_ESTABLISHED );
-    			else
-    				((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
+    			if ( origin->receive )
+    			{
+    				if ( stream->status == NTOH_STATUS_ESTABLISHED )
+    					((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_ESTABLISHED );
+    				else
+    					((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
+    			}
     		}else{
     			lock_access ( &session->lock );
     			delete_stream ( session , &stream , NTOH_REASON_SYNC , ret );

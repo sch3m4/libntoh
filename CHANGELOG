@@ -1,5 +1,6 @@
 libntoh (0.4a)
 
+	* Added a flag to indicate we want to receive segments from a given peer
 	* Fixed a MAJOR bug in TCP (avoided to correctly finish TCP streams)
 	* Self implementation of hash tables (collision resolution by chaining)
 	* Fixed a MAJOR bug in IPv4 defragmentation (deadlock)
@@ -25,7 +26,7 @@ libntoh (0.2a)
 	* ntohexample code updated
 	* More comments added
 	* Documentation regenerated
-	* Added forgoten call to "shandler" in ntohexample
+	* Added forgotten call to "shandler" in ntohexample
 	* Added pkg-config compilation support
 	
 	-- Chema Garcia <sch3m4@opensec.es> (14/11/2011)

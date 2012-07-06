@@ -11,6 +11,7 @@ Resolving deltas: 100% (31/31), done.
 $
 
 
+
 Introduction
 ============
 
@@ -22,6 +23,7 @@ A: It's true there are some libraries which aims to do the same things (like lib
 
 Q: Which protocols does libntoh support?
 A: Currently libntoh performs IP defragmentation and TCP reassembly
+
 
 
 Dependencies
@@ -43,6 +45,7 @@ Note: pkg-config isn't really needed but it helps. (See "ntohexample" compilatio
 You need CMake to compile libntoh and ntohexample.
 
 
+
 Compilation instructions
 ========================
 
@@ -57,6 +60,11 @@ Compilation instructions
 (...)
 ../libntoh/build$
 
+For a more detailed description refer to
+	https://github.com/sch3m4/libntoh/wiki/2.-Compilation-And-Installation-Instructions
+	https://github.com/sch3m4/libntoh/wiki/3.-Custom-Compilation
+	
+	
 
 "ntohexample" Compilation instructions
 ======================================
@@ -70,27 +78,6 @@ Compilation instructions
 (...)
 Linking C executable ntohexample
 [100%] Built target ntohexample
-../libntoh/example$ ./build/ntohexample
-
-###########################
-#     libntoh Example     #
-# ----------------------- #
-# Written by Chema Garcia #
-# ----------------------- #
-#  http://safetybits.net  #
-#  sch3m4@safetybits.net  #
-#  sch3m4@brutalsec.net   #
-###########################
-
-[i] libntoh version: 0.4a
-
-[+] Usage: ./ntohexample <options>
-
-+ Options:
-	-i | --iface <val> -----> Interface to read packets from
-	-f | --file <val> ------> File path to read packets from
-	-F | --filter <val> ----> Capture filter (must contain "tcp")
-
 ../libntoh/example$
 
 The default installation prefix is "/usr/local", so if you plan to link against libntoh using pkg-config
@@ -107,3 +94,138 @@ $ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
 So the new installation prefix will be "/usr"
 
 For more information, refer to the wiki page.
+
+
+
+"ntohexample" Output:
+=====================
+
+$ sudo ./ntohexample 
+
+###########################
+#     libntoh Example     #
+# ----------------------- #
+# Written by Chema Garcia #
+# ----------------------- #
+#  http://safetybits.net  #
+#   chema@safetybits.net  #
+#   sch3m4@brutalsec.net  #
+###########################
+
+[i] libntoh version: 0.4a
+
+[+] Usage: ./ntohexample <options>
+
++ Options:
+	-i | --iface <val> -----> Interface to read packets from
+	-f | --file <val> ------> File path to read packets from
+	-F | --filter <val> ----> Capture filter (must contain "tcp" or "ip")
+	-c | --client ----------> Receive client data only
+	-s | --server ----------> Receive server data only
+
+$ sudo ./ntohexample -i eth0 -F "tcp and host 10.0.0.1 and port 22"
+
+###########################
+#     libntoh Example     #
+# ----------------------- #
+# Written by Chema Garcia #
+# ----------------------- #
+#  http://safetybits.net  #
+#   chema@safetybits.net  #
+#   sch3m4@brutalsec.net  #
+###########################
+
+[i] libntoh version: 0.4a
+
+[i] Source: eth0 / Ethernet
+[i] Filter: tcp and host 10.0.0.1 and port 22
+[i] Receive data from client: Yes
+[i] Receive data from server: Yes
+[i] Max. TCP streams allowed: 1024
+[i] Max. IPv4 flows allowed: 1024
+
+
+[SYN Sent] 10.0.0.2:40819 (SYN Sent | Window: 233600) ---> 10.0.0.1:22 (Listen | Window: 0)
+	
+[SYN Rcv] 10.0.0.1:22 (SYN Rcv | Window: 4194240) ---> 10.0.0.2:40819 (SYN Sent | Window: 233600)
+	
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194240)
+	
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 49 SEQ: 1 ACK: 1 Next SEQ: 50
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4193384)
+	+ Data segment | Bytes: 32 SEQ: 1 ACK: 50 Next SEQ: 33
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 856 SEQ: 50 ACK: 33 Next SEQ: 906
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194240)
+	+ Data segment | Bytes: 1272 SEQ: 33 ACK: 906 Next SEQ: 1305
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4193928)
+	+ Data segment | Bytes: 80 SEQ: 1305 ACK: 906 Next SEQ: 1385
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 312 SEQ: 906 ACK: 1385 Next SEQ: 1218
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194240)
+	+ Data segment | Bytes: 16 SEQ: 1385 ACK: 1218 Next SEQ: 1401
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194192)
+	+ Data segment | Bytes: 48 SEQ: 1401 ACK: 1218 Next SEQ: 1449
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 48 SEQ: 1218 ACK: 1449 Next SEQ: 1266
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194176)
+	+ Data segment | Bytes: 64 SEQ: 1449 ACK: 1266 Next SEQ: 1513
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 64 SEQ: 1266 ACK: 1513 Next SEQ: 1330
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4193920)
+	+ Data segment | Bytes: 368 SEQ: 1513 ACK: 1330 Next SEQ: 1881
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 320 SEQ: 1330 ACK: 1881 Next SEQ: 1650
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194208)
+	+ Data segment | Bytes: 640 SEQ: 1881 ACK: 1650 Next SEQ: 2521
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 32 SEQ: 1650 ACK: 2521 Next SEQ: 1682
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194192)
+	+ Data segment | Bytes: 128 SEQ: 2521 ACK: 1682 Next SEQ: 2649
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233488)
+	+ Data segment | Bytes: 48 SEQ: 1682 ACK: 2649 Next SEQ: 1730
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194160)
+	+ Data segment | Bytes: 112 SEQ: 2649 ACK: 1730 Next SEQ: 2761
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194208) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 80 SEQ: 1730 ACK: 2761 Next SEQ: 1810
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233600)
+	+ Data segment | Bytes: 32 SEQ: 1810 ACK: 2761 Next SEQ: 1842
+		
+[Established] 10.0.0.1:22 (Established | Window: 4194240) ---> 10.0.0.2:40819 (Established | Window: 233568)
+	+ Data segment | Bytes: 160 SEQ: 1842 ACK: 2761 Next SEQ: 2002
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233536) ---> 10.0.0.1:22 (Established | Window: 4194240)
+	+ Data segment | Bytes: 32 SEQ: 2761 ACK: 2002 Next SEQ: 2793
+		
+[Established] 10.0.0.2:40819 (Established | Window: 233600) ---> 10.0.0.1:22 (Established | Window: 4194240)
+	+ Data segment | Bytes: 64 SEQ: 2793 ACK: 2002 Next SEQ: 2857
+		
+[Closing] 10.0.0.2:40819 (Fin Wait1 | Window: 233600) ---> 10.0.0.1:22 (Close Wait | Window: 4194240)
+	
+[Closing] 10.0.0.1:22 (Last ACK | Window: 4194240) ---> 10.0.0.2:40819 (Closing | Window: 233600)
+	
+[Closed] 10.0.0.2:40819 (Time Wait | Window: 233600) ---> 10.0.0.1:22 (Closed | Window: 4194240)
+^C
+
+[+] Capture finished!
+$

@@ -50,7 +50,7 @@ echo "[i] PKG_CONFIG_PATH set to: $pkgconfig_path"
 echo ''
 
 
-mkdir $build_dir
+mkdir $build_dir 2>/dev/null
 cd $build_dir
 $cmake ../
 $make

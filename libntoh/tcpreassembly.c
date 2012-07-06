@@ -68,12 +68,17 @@ const char *ntoh_tcp_get_status ( unsigned int status )
 }
 
 /** @brief Returns the key for the stream identified by 'data' **/
-inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t data )
+inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t data )
 {
 	if ( !data )
 		return 0;
 
-	return ( ( ( data->sport & 0xFF ) | ( ( data->dport & 0xFF ) << 8 ) | ( ( data->source & 0xFF ) << 16 ) | ( ( data->destination & 0xFF ) << 24 ) ) & (session->streams->table_size - 1) );
+	return (
+			( ( ( data->sport | (data->protocol & 0x0F) ) & 0xFF ) |
+			( ( ( data->dport | (data->protocol & 0xF0) ) & 0xFF ) << 8 ) |
+			( ( data->source & 0xFF ) << 16 ) |
+			( ( data->destination & 0xFF ) << 24 ) )
+		);
 }
 
 /** @brief Sends the given segment to the user **/
@@ -347,6 +352,36 @@ static void *timeouts_thread ( void *p )
 	return 0;
 }
 
+/** @brief API to get a tuple5 **/
+unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple )
+{
+	if ( !ip || !tcp || !tuple )
+		return NTOH_ERROR_PARAMS;
+
+	tuple->protocol = (unsigned char)(ip->ip_p);
+	tuple->source = ip->ip_src.s_addr;
+	tuple->sport = tcp->th_sport;
+	tuple->destination = ip->ip_dst.s_addr;
+	tuple->dport = tcp->th_dport;
+
+	return NTOH_OK;
+}
+
+/** @brief API to get the size of the sessions table (max allowed streams) **/
+unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
+{
+	unsigned int ret = 0;
+
+	if ( !session )
+		return ret;
+
+	lock_access ( & (session->lock) );
+	ret = session->streams->table_size;
+	unlock_access ( & (session->lock) );
+
+	return ret;
+}
+
 /** @brief API to create a new session and add it to the global sessions list **/
 pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error )
 {
@@ -412,7 +447,7 @@ void ntoh_tcp_free_session ( pntoh_tcp_session_t session )
 /** @brief API to free a TCP stream (wrapper) **/
 void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
-	if ( !stream || !(*stream) )
+	if ( !session || !stream || !(*stream) )
 		return;
 
 	lock_access( &session->lock );
@@ -460,21 +495,27 @@ void ntoh_tcp_init ( void )
 	return;
 }
 
-/** @brief API to look for a TCP stream identified by 'tuple4' **/
-pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t tuple4 )
+/** @brief API to look for a TCP stream identified by 'tuple5' **/
+pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 )
 {
-	ntoh_tcp_key_t key = tcp_getkey( session , tuple4 );
-	ntoh_tcp_tuple4_t tuplerev;
-	pntoh_tcp_stream_t ret = 0;
+	ntoh_tcp_key_t		key = 0;
+	ntoh_tcp_tuple5_t	tuplerev = {0};
+	pntoh_tcp_stream_t	ret = 0;
+
+	if ( !session || !tuple5 )
+		return ret;
+
+	key = tcp_getkey( session , tuple5 );
 
 	lock_access( &session->lock );
 
 	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key ) ) )
 	{
-		tuplerev.destination = tuple4->source;
-		tuplerev.source = tuple4->destination;
-		tuplerev.sport = tuple4->dport;
-		tuplerev.dport = tuple4->sport;
+		tuplerev.destination = tuple5->source;
+		tuplerev.source = tuple5->destination;
+		tuplerev.sport = tuple5->dport;
+		tuplerev.dport = tuple5->sport;
+		tuplerev.protocol = tuple5->protocol;
 
 		key = tcp_getkey( session , &tuplerev );
 
@@ -487,12 +528,22 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 }
 
 /** @brief API to create a new TCP stream and add it to the given session **/
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t tuple4 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error )
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error )
 {
-	pntoh_tcp_stream_t stream = 0;
-	ntoh_tcp_key_t key = tcp_getkey( session , tuple4 );
+	pntoh_tcp_stream_t	stream = 0;
+	ntoh_tcp_key_t		key = 0;
 
-	if ( !key )
+	if ( error != 0 )
+		*error = 0;
+
+	if ( !session )
+	{
+		if ( error != 0 )
+			*error = NTOH_ERROR_PARAMS;
+		return 0;
+	}
+
+	if ( !(key = tcp_getkey( session , tuple5 )) )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_NOKEY;
@@ -506,10 +557,10 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 		return 0;
 	}
 
-	if ( !tuple4->destination || !tuple4->dport || !tuple4->source || !tuple4->sport )
+	if ( !tuple5->destination || !tuple5->dport || !tuple5->source || !tuple5->sport )
 	{
 		if ( error != 0 )
-			*error = NTOH_ERROR_INVALID_TUPLE4;
+			*error = NTOH_ERROR_INVALID_TUPLE5;
 		return 0;
 	}
 
@@ -532,7 +583,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 		return 0;
 	}
 
-	memcpy( &( stream->tuple ), tuple4, sizeof(ntoh_tcp_tuple4_t) );
+	memcpy( &( stream->tuple ), tuple5, sizeof(ntoh_tcp_tuple5_t) );
 	stream->key = key;
 	stream->client.addr = stream->tuple.source;
 	stream->client.port = stream->tuple.sport;
@@ -564,6 +615,9 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 unsigned int ntoh_tcp_count_streams ( pntoh_tcp_session_t session )
 {
 	unsigned int ret = 0;
+
+	if ( !session )
+		return ret;
 
 	lock_access( &session->lock );
 
@@ -1033,8 +1087,8 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	int						ret = NTOH_OK;
 	pntoh_tcp_segment_t		segment = 0;
 
-	if ( !stream )
-		return NTOH_INCORRECT_SESSION;
+	if ( !stream || !session )
+		return NTOH_ERROR_PARAMS;
 
 	/* verify IP header */
 	if ( !ip ) // no ip header

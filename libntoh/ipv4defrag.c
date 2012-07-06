@@ -62,6 +62,35 @@ inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pn
 	return ret;
 }
 
+/** @brief API to get the size of the flows table (max allowed flows) **/
+unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session )
+{
+	unsigned int ret = 0;
+
+	if ( !session )
+		return ret;
+
+	lock_access ( & (session->lock) );
+	ret = session->flows->table_size;
+	unlock_access ( & (session->lock) );
+
+	return ret;
+}
+
+/** @brief API to get a tuple4 **/
+unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple )
+{
+	if ( !ip || !tuple )
+		return NTOH_ERROR_PARAMS;
+
+	tuple->destination = ip->ip_dst.s_addr;
+	tuple->source = ip->ip_src.s_addr;
+	tuple->id = ip->ip_id;
+	tuple->protocol = ip->ip_p;
+
+	return NTOH_OK;
+}
+
 pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
 	ntoh_ipv4_key_t key = 0;

@@ -1,19 +1,21 @@
 CMAKE_MINIMUM_REQUIRED ( VERSION 2.8 FATAL_ERROR )
 PROJECT ( LIBNTOH )
 
-# set source files and flags
-SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c common.c )
-SET ( CMAKE_C_FLAGS "-Wall -Os -O2 -pipe -fPIC -g" )
-SET ( LIBNTOH_INC inc )
-
 # set project version
 SET ( ${PROJECT_NAME}_MAJOR_VERSION "0" )
 SET ( ${PROJECT_NAME}_MINOR_VERSION "4" )
 SET ( ${PROJECT_NAME}_STATUS_VERSION "a" )
 SET ( ${PROJECT_NAME}_VERSION "${${PROJECT_NAME}_MAJOR_VERSION}.${${PROJECT_NAME}_MINOR_VERSION}${${PROJECT_NAME}_STATUS_VERSION}" )
 
+# set source files and flags
+SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c common.c )
+SET ( LIBNTOH_INC inc )
+SET ( CMAKE_C_FLAGS "-Wall -Os -O3 -pipe -fPIC" )
+
 # set include directories
 INCLUDE_DIRECTORIES ( ${LIBNTOH_INC} )
+
+SET ( CMAKE_INCLUDE_PATH "/usr/include" )
 
 SET ( CMAKE_BUILD_TYPE Release )
 

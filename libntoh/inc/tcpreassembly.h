@@ -76,7 +76,9 @@ typedef struct
 	unsigned short sport;
 	///destination port
 	unsigned short dport;
-} ntoh_tcp_tuple4_t, *pntoh_tcp_tuple4_t;
+	///protocol
+	unsigned short protocol;
+} ntoh_tcp_tuple5_t, *pntoh_tcp_tuple5_t;
 
 /** @brief data sent to user-function **/
 typedef struct _tcp_segment_
@@ -139,7 +141,7 @@ typedef struct _tcp_stream_
 	struct _tcp_stream_ *next;
 
 	///data to generate the key to identify the connection
-	ntoh_tcp_tuple4_t tuple;
+	ntoh_tcp_tuple5_t tuple;
 	///client data
 	ntoh_tcp_peer_t client;
 	///server data
@@ -269,21 +271,21 @@ void ntoh_tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *st
 /**
  * @brief Finds a TCP stream
  * @param session TCP Session
- * @param tuple4 Stream information
+ * @param tuple5 Stream information
  * @return Pointer to the stream on success or 0 when fails
  */
-pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t tuple4 );
+pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 );
 
 /**
  * @brief Adds a new TCP stream
  * @param session TCP Session
- * @param tuple4 Stream information
+ * @param tuple5 Stream information
  * @param function User defined function to receive the segments of this stream
  * @param udata User-defined data to be linked to the new stream
  * @param error Returned error code
  * @return A pointer to the new stream on success or 0 when fails
  */
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple4_t tuple4 , pntoh_tcp_callback_t function , void *udata , unsigned int *error );
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error );
 
 /**
  * @brief Returns the total count of TCP streams stored in the global hash table
@@ -310,5 +312,20 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
  */
 const char *ntoh_tcp_get_status ( unsigned int status );
 
+/**
+ *  @brief Gets the size of the sessions table (max allowed streams)
+ *  @param session TCP Session
+ *  @return The max. amount of TCP streams that can be stored , or zero on error
+**/
+unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session );
+
+/**
+ * @brief Gets the tuple5 of a TCP/IPv4 stream
+ * @param ip Pointer to the IPv4 header
+ * @param tcp Pointer to the TCP header
+ * @param tuple Pointer to the output tuple5 struct
+ * @return NTOH_OK on success or the corresponding error code
+ */
+unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple );
 
 #endif /* __LIBNTOH_TCPRS_H__ */

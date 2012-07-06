@@ -192,5 +192,19 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
  */
 unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session );
 
+/**
+ * @brief Gets the size of the flows table (max allowed flows)
+ *  @param session IPv4 Session
+ *  @return The max. amount of IPv4 flows that can be stored , or zero on error
+**/
+unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session );
+
+/**
+ * @brief Gets the tuple4 of a IPv4 flow
+ * @param ip Pointer to the IPv4 header
+ * @param tuple Pointer to the output tuple4 struct
+ * @return NTOH_OK on success or the corresponding error code
+ */
+unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple );
 
 #endif /* __LIBNTOH_IPDF__ */

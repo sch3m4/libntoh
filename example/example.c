@@ -85,7 +85,7 @@ void shandler ( int sign )
 /**
  * @brief Returns a struct which stores some peer information
  */
-ppeer_info_t get_peer_info ( unsigned char *payload , size_t payload_len , unsigned int srcip , unsigned int dstip , unsigned short sport , unsigned short dport )
+ppeer_info_t get_peer_info ( unsigned char *payload , size_t payload_len , pntoh_tcp_tuple5_t tuple )
 {
 	ppeer_info_t ret = 0;
 	size_t len = 0;
@@ -97,9 +97,9 @@ ppeer_info_t get_peer_info ( unsigned char *payload , size_t payload_len , unsig
 	ret->data = (unsigned char*) calloc ( ret->data_len , sizeof ( unsigned char ) );
 	memcpy ( ret->data , payload , ret->data_len );
 
-	snprintf ( path , sizeof(path) , "%s:%d-" , inet_ntoa ( *(struct in_addr*)&srcip ) , ntohs(sport) );
+	snprintf ( path , sizeof(path) , "%s:%d-" , inet_ntoa ( *(struct in_addr*)&(tuple->source) ) , ntohs(tuple->sport) );
 	len = strlen(path);
-	snprintf ( &path[len] , sizeof(path) - len, "%s:%d" , inet_ntoa ( *(struct in_addr*)&dstip ) , ntohs(dport) );
+	snprintf ( &path[len] , sizeof(path) - len, "%s:%d" , inet_ntoa ( *(struct in_addr*)&(tuple->destination) ) , ntohs(tuple->dport) );
 
 	ret->path = strndup ( path , sizeof(path) );
 
@@ -180,7 +180,7 @@ void write_data ( ppeer_info_t info )
 void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 {
 	ppeer_info_t		pinfo;
-	ntoh_tcp_tuple4_t	tcpt4;
+	ntoh_tcp_tuple5_t	tcpt5;
 	pntoh_tcp_stream_t	stream;
 	struct tcphdr 		*tcp;
 	size_t 				size_ip;
@@ -201,21 +201,18 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 	payload = (unsigned char *)iphdr + size_ip + size_tcp;
 	size_payload = total_len - ( size_ip + size_tcp );
 
-	tcpt4.source = iphdr->ip_src.s_addr;
-	tcpt4.sport = tcp->th_sport;
-	tcpt4.destination = iphdr->ip_dst.s_addr;
-	tcpt4.dport = tcp->th_dport;
+	ntoh_tcp_get_tuple5 ( iphdr , tcp , &tcpt5 );
 
 	/* find the stream or creates a new one */
-	if ( !( stream = ntoh_tcp_find_stream( tcp_session , &tcpt4 ) ) )
-		if ( ! ( stream = ntoh_tcp_new_stream( tcp_session , &tcpt4, callback , 0 , &error) ) )
+	if ( !( stream = ntoh_tcp_find_stream( tcp_session , &tcpt5 ) ) )
+		if ( ! ( stream = ntoh_tcp_new_stream( tcp_session , &tcpt5, callback , 0 , &error) ) )
 		{
 			fprintf ( stderr , "\n[e] Error %d creating new stream: %s" , error , ntoh_get_errdesc ( error ) );
 			return;
 		}
 
 	if ( size_payload > 0 )
-		pinfo = get_peer_info ( payload , size_payload , tcpt4.source , tcpt4.destination , tcpt4.sport , tcpt4.dport );
+		pinfo = get_peer_info ( payload , size_payload , &tcpt5 );
 	else
 		pinfo = 0;
 
@@ -251,10 +248,7 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 
 	total_len = ntohs( iphdr->ip_len );
 
-	ipt4.destination = iphdr->ip_dst.s_addr;
-	ipt4.source = iphdr->ip_src.s_addr;
-	ipt4.id = iphdr->ip_id;
-	ipt4.protocol = iphdr->ip_p;
+	ntoh_ipv4_get_tuple4 ( iphdr , &ipt4 );
 
 	if ( !( flow = ntoh_ipv4_find_flow( ipv4_session , &ipt4 ) ) )
 		if ( ! (flow = ntoh_ipv4_new_flow( ipv4_session , &ipt4, callback, 0 , &error )) )
@@ -478,7 +472,12 @@ int main ( int argc , char *argv[] )
 	else
 		fprintf( stderr , "No");
 
-	fprintf ( stderr , "\n" );
+	signal( SIGINT, &shandler );
+	signal( SIGTERM, &shandler );
+
+	/*******************************************/
+	/** libntoh initialization process starts **/
+	/*******************************************/
 
 	ntoh_init ();
 
@@ -488,6 +487,8 @@ int main ( int argc , char *argv[] )
 		exit ( -5 );
 	}
 
+	fprintf ( stderr , "\n[i] Max. TCP streams allowed: %d" , ntoh_tcp_get_size ( tcp_session ) );
+
 	if ( ! (ipv4_session = ntoh_ipv4_new_session ( 0 , 0 , &error )) )
 	{
 		ntoh_tcp_free_session ( tcp_session );
@@ -495,8 +496,7 @@ int main ( int argc , char *argv[] )
 		exit ( -6 );
 	}
 
-	signal( SIGINT, &shandler );
-	signal( SIGTERM, &shandler );
+	fprintf ( stderr , "\n[i] Max. IPv4 flows allowed: %d\n\n" , ntoh_ipv4_get_size ( ipv4_session ) );
 
 	/* capture starts */
 	while ( ( packet = pcap_next( handle, &header ) ) != 0 )

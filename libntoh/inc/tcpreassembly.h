@@ -38,6 +38,8 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 
+#include "sfhash.h"
+
 /** @brief connection status **/
 enum _ntoh_tcp_status_
 {
@@ -182,6 +184,8 @@ typedef struct _tcp_session_
 
         /* TIME-WAIT connections */
         ptcprs_streams_table_t timewait;
+
+	int rand;
 
         ntoh_lock_t	lock;
         pthread_t tID;

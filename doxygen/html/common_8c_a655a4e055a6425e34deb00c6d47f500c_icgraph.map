@@ -1,0 +1,4 @@
+<map id="htable_count" name="htable_count">
+<area shape="rect" id="node3" href="$ipv4defrag_8c.html#acf5643df2e4d6a1fe0477a18fc8487ce" title="Returns the total count of flows stored in the global hash table." alt="" coords="168,5,333,33"/>
+<area shape="rect" id="node5" href="$tcpreassembly_8c.html#a6a721a5b23eaed34b3cebe9f893de324" title="API to get the amount of streams stored in a session." alt="" coords="160,55,341,83"/>
+</map>

@@ -34,21 +34,24 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <getopt.h>
 #include <signal.h>
-#define __FAVOR_BSD
-#include <netinet/ip.h>
+#include <errno.h>
+
+#ifndef __FAVOR_BSD
+# define __FAVOR_BSD
+#endif
+
 #include <netinet/tcp.h>
+#include <netinet/ip.h>
+#include <netinet/if_ether.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-#include <sys/time.h>
-#include <errno.h>
 
 #include <pcap.h>
 #include <libntoh.h>
-
-#define SIZE_ETHERNET 14
 
 typedef struct
 {
@@ -242,8 +245,8 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 {
 	ntoh_ipv4_tuple4_t 	ipt4;
 	pntoh_ipv4_flow_t 	flow;
-	size_t				total_len;
-	int 				ret;
+	size_t			total_len;
+	int 			ret;
 	unsigned int		error;
 
 	total_len = ntohs( iphdr->ip_len );
@@ -502,7 +505,7 @@ int main ( int argc , char *argv[] )
 	while ( ( packet = pcap_next( handle, &header ) ) != 0 )
 	{
 		/* get packet headers */
-		ip = (struct ip*) ( packet + SIZE_ETHERNET );
+		ip = (struct ip*) ( packet + sizeof ( struct ether_header ) );
 		if ( (ip->ip_hl * 4 ) < sizeof(struct ip) )
 			continue;
 

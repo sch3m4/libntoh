@@ -3,7 +3,7 @@
 
 /* sfhash.h: SuperFastHash support.
  *
- * Copyright (C) 2004 by Paul Hsieh 
+ * Copyright (C) 2004 by Paul Hsieh
  *
  * http://www.azillionmonkeys.com/qed/hash.html
  *

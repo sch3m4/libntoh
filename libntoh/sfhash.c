@@ -11,13 +11,13 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 	const char * data = key;
 	unsigned int hash = len + initval, tmp;
 	int rem;
-	
+
 	if (len <= 0 || !data )
 		return 0;
-	
+
 	rem = len & 3;
 	len >>= 2;
-	
+
 	/* Main loop */
 	for (; len > 0; len--) {
 		/* Mix 32bit chunk of the data */
@@ -27,7 +27,7 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 		data += 2*sizeof(unsigned short);
 		hash += hash >> 11;
 	}
-	
+
 	/* Handle end cases */
 	switch (rem) {
 	case 3:	hash += *((unsigned short *)data);
@@ -43,7 +43,7 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 		hash ^= hash << 10;
 		hash += hash >> 1;
 	}
-	
+
 	/* Force "avalanching" of final 127 bits */
 	hash ^= hash << 3;
 	hash += hash >> 5;
@@ -59,6 +59,6 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 unsigned int sfhash_3words(unsigned int a, unsigned int b, unsigned int c, unsigned int initval)
 {
 	unsigned int aux[3] = {a,b,c};
-	
+
 	return sfhash(aux, 12, initval);
 }

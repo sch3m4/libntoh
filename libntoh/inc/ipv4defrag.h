@@ -101,29 +101,34 @@ typedef struct _ipv4_session_
 	sem_t max_fragments;
 	/// hash table to store IP flows
 	pipv4_flows_table_t flows;
-	ntoh_lock_t lock;
 	/// connection tables related
 	pthread_t tID;
+	ntoh_lock_t lock;
 }ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
 
+/// min. PMTU
 #ifndef MIN_IPV4_FRAGMENT_LENGTH
-# define MIN_IPV4_FRAGMENT_LENGTH	576 /* min. PMTU */
+# define MIN_IPV4_FRAGMENT_LENGTH	576
 #endif
 
+/// max. IPv4 datagram fragment length
 #ifndef MAX_DATAGRAM_LENGTH
-# define MAX_DATAGRAM_LENGTH	65535
+# define MAX_DATAGRAM_LENGTH		65535
 #endif
 
+/// IPv4 fragment timeout
 #ifndef DEFAULT_IPV4_FRAGMENT_TIMEOUT
-# define DEFAULT_IPV4_FRAGMENT_TIMEOUT		15
+# define DEFAULT_IPV4_FRAGMENT_TIMEOUT	15
 #endif
 
+/// max. IPv4 allowed flows
 #ifndef DEFAULT_IPV4_MAX_FLOWS
-# define DEFAULT_IPV4_MAX_FLOWS				1024
+# define DEFAULT_IPV4_MAX_FLOWS		1024
 #endif
 
+/// max. IPv4 allowed fragments
 #ifndef DEFAULT_IPV4_MAX_FRAGMENTS
-# define DEFAULT_IPV4_MAX_FRAGMENTS			((12*1024*1024) / sizeof(ntoh_ipv4_fragment_t))
+# define DEFAULT_IPV4_MAX_FRAGMENTS	((12*1024*1024) / sizeof(ntoh_ipv4_fragment_t))
 #endif
 
 typedef void(*pipv4_dfcallback_t) ( pntoh_ipv4_flow_t , pntoh_ipv4_tuple4_t , unsigned char* , size_t , unsigned short );
@@ -194,8 +199,8 @@ unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session );
 
 /**
  * @brief Gets the size of the flows table (max allowed flows)
- *  @param session IPv4 Session
- *  @return The max. amount of IPv4 flows that can be stored , or zero on error
+ * @param session IPv4 Session
+ * @return The max. amount of IPv4 flows that can be stored , or zero on error
 **/
 unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session );
 

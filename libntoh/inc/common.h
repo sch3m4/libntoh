@@ -33,21 +33,21 @@
 
 #ifndef _HIDDEN
 # define _HIDDEN __attribute__((visibility("hidden")))
-# endif
+#endif
 
 /* linked list */
 typedef struct _hash_node_
 {
 	struct _hash_node_	*next;
-	void				*val;
+	void			*val;
 	unsigned int		key;
 } htnode_t , *phtnode_t;
 
 /* hash table definition */
 typedef struct
 {
-	size_t	table_size;
-	phtnode_t *table;
+	size_t		table_size;
+	phtnode_t	*table;
 } htable_t , *phtable_t;
 
 /******************************************************************/

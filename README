@@ -11,7 +11,6 @@ Resolving deltas: 100% (31/31), done.
 $
 
 
-
 Introduction
 ============
 
@@ -22,8 +21,7 @@ Q: Why libntoh?
 A: It's true there are some libraries which aims to do the same things (like libnids), but libntoh is intended to provide a flexible, thread-safe and highly configurable environment for the final user. And most of all, libntoh is released under Modified BSD License to avoid many license issues.
 
 Q: Which protocols does libntoh support?
-A: Currently libntoh performs IP defragmentation and TCP reassembly
-
+A: Currently libntoh performs IPv4 defragmentation and TCP reassembly
 
 
 Dependencies
@@ -45,7 +43,6 @@ Note: pkg-config isn't really needed but it helps. (See "ntohexample" compilatio
 You need CMake to compile libntoh and ntohexample.
 
 
-
 Compilation instructions
 ========================
 
@@ -61,9 +58,7 @@ Compilation instructions
 ../libntoh/build$
 
 For a more detailed description refer to
-	https://github.com/sch3m4/libntoh/wiki/2.-Compilation-And-Installation-Instructions
-	https://github.com/sch3m4/libntoh/wiki/3.-Custom-Compilation
-	
+	https://github.com/sch3m4/libntoh/wiki	
 	
 
 "ntohexample" Compilation instructions
@@ -94,7 +89,6 @@ $ cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
 So the new installation prefix will be "/usr"
 
 For more information, refer to the wiki page.
-
 
 
 "ntohexample" Output:
@@ -225,7 +219,6 @@ $ sudo ./ntohexample -i eth0 -F "tcp and host 10.0.0.1 and port 22"
 [Closing] 10.0.0.1:22 (Last ACK | Window: 4194240) ---> 10.0.0.2:40819 (Closing | Window: 233600)
 	
 [Closed] 10.0.0.2:40819 (Time Wait | Window: 233600) ---> 10.0.0.1:22 (Closed | Window: 4194240)
-^C
 
 [+] Capture finished!
 $

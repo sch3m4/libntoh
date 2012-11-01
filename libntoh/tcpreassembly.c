@@ -58,6 +58,7 @@ static const char tcp_status[][1024] = {
 		"Time Wait"
 };
 
+
 /** @brief API to get the string description associated to the given value corresponding with a TCP status **/
 const char *ntoh_tcp_get_status ( unsigned int status )
 {
@@ -73,12 +74,16 @@ inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tc
 	if ( !data )
 		return 0;
 
+	return sfhash_3words ( data->source, (data->destination ^ data->protocol) ,
+				(data->sport | (data->dport << 16)),
+				session->rand);
+/*
 	return (
 			( ( ( data->sport | (data->protocol & 0x0F) ) & 0xFF ) |
 			( ( ( data->dport | (data->protocol & 0xF0) ) & 0xFF ) << 8 ) |
 			( ( data->source & 0xFF ) << 16 ) |
 			( ( data->destination & 0xFF ) << 24 ) )
-		);
+		);*/
 }
 
 /** @brief Sends the given segment to the user **/
@@ -400,6 +405,8 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 		return 0;
 	}
 
+    ntoh_tcp_init();
+
 	session->streams = htable_map ( max_streams );
 	session->timewait = htable_map ( max_timewait );
 
@@ -410,7 +417,10 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
     pthread_mutex_init( &session->lock.mutex, 0 );
     pthread_cond_init( &session->lock.pcond, 0 );
 
-    ntoh_tcp_init();
+	srand((int)time(NULL));
+
+	session->rand = rand();
+
 
     lock_access ( &params.lock );
 

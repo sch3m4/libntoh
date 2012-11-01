@@ -106,8 +106,8 @@ typedef struct
 
 /** @brief Header files */
 #include "common.h"
-#include "tcpreassembly.h"
 #include "ipv4defrag.h"
+#include "tcpreassembly.h"
 
 /**
  * @brief Returns library version

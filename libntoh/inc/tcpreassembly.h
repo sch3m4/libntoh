@@ -238,6 +238,11 @@ typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pn
 # define DEFAULT_TCP_MAX_TIMEWAIT_STREAMS(max)   (max>0?max/3:DEFAULT_TCP_MAX_STREAMS/3)
 #endif
 
+/** @brief Delay to check session's streams timeout (ms) **/
+#ifndef DEFAULT_TIMEOUT_DELAY
+# define DEFAULT_TIMEOUT_DELAY	3000
+#endif
+
 /**
  * @brief Initializes all needed resources for TCP reassembly
  */

@@ -32,14 +32,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <poll.h>
 #include <sys/time.h>
 #include <libntoh.h>
 
 static struct
 {
-		unsigned short		init;
-		pntoh_tcp_session_t sessions_list;
-		ntoh_lock_t			lock;
+	unsigned short		init;
+	pntoh_tcp_session_t	sessions_list;
+	ntoh_lock_t		lock;
 }params = {0,0};
 
 #define IS_TIMEWAIT(peer,side) (peer.status == DEFAULT_TCP_TIMEWAIT_TIMEOUT || side.status == DEFAULT_TCP_TIMEWAIT_TIMEOUT )
@@ -349,7 +350,7 @@ static void *timeouts_thread ( void *p )
 	{
 		tcp_check_timeouts( (pntoh_tcp_session_t) p );
 		pthread_testcancel();
-		sleep( 1 );
+		poll ( 0 , 0 , DEFAULT_TIMEOUT_DELAY );
 	}
 
 	pthread_exit( 0 );

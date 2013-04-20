@@ -46,16 +46,16 @@ You need CMake to compile libntoh and ntohexample.
 Compilation instructions
 ========================
 
-../libntoh$ mkdir build
-../libntoh$ cd build
-../libntoh/build$ cmake ../
+../src$ mkdir build
+../src$ cd build
+../src/build$ cmake ../
 (...)
-../libntoh/build$ make
+../src/build$ make
 (...)
-../libntoh/build$ sudo make install
+../src/build$ sudo make install
 [sudo] password for sch3m4: 
 (...)
-../libntoh/build$
+../src/build$
 
 For a more detailed description refer to
 	https://github.com/sch3m4/libntoh/wiki	

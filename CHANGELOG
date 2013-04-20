@@ -1,5 +1,7 @@
 libntoh (0.4a)
 
+	* Added DEFAULT_TIMEOUT_DELAY, delay value to check connections timeout
+	* Replaced 'sleep' calls by 'poll'
 	* Added some sanity checks of functions input
 	* Added a function to get the tuple4 for an IPv4 flow
 	* Added a function to get the tuple5 for an TCP/IPv4 stream

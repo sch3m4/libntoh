@@ -1088,14 +1088,14 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 /** @brief API for add an incoming segment **/
 int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct ip *ip , size_t len , void *udata )
 {
-	size_t 					iphdr_len = 0;
-	size_t					tcphdr_len = 0;
-	size_t					payload_len = 0;
+	size_t				iphdr_len = 0;
+	size_t				tcphdr_len = 0;
+	size_t				payload_len = 0;
 	struct tcphdr			*tcp = 0;
 	pntoh_tcp_peer_t		origin = 0;
 	pntoh_tcp_peer_t		destination = 0;
 	unsigned int			tstamp = 0;
-	int						ret = NTOH_OK;
+	int				ret = NTOH_OK;
 	pntoh_tcp_segment_t		segment = 0;
 
 	if ( !stream || !session )

@@ -34,7 +34,7 @@
 #include <netinet/in.h>
 
 /// macro to verify if an IP datagram is part of a fragmented datagram
-#define NTOH_IPV4_IS_FRAGMENT(off)			( ( (8*(ntohs(off) & 0x1FFF)) > 0 || (ntohs(off) & 0x2000) ) && !(ntohs(off) & 0x4000) )
+#define NTOH_IPV4_IS_FRAGMENT(off)	( ( (8*(ntohs(off) & 0x1FFF)) > 0 || (ntohs(off) & 0x2000) ) && !(ntohs(off) & 0x4000) )
 
 /** @brief Struct to generate the flow key **/
 typedef struct

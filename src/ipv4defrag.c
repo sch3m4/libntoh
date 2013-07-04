@@ -452,7 +452,12 @@ inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 			{
 				lock_access ( &item->lock );
 				__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT );
-				node = prev;
+				if (node != prev)
+				{
+				      node = prev;
+				}else{
+				      node = 0;
+				}
 			}else{
 				prev = node;
 				node = node->next;

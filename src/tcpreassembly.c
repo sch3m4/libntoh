@@ -306,7 +306,12 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			{
 				lock_access ( &item->lock );
 				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
-				node = prev;
+				if (node != prev)
+				{
+                                       node = prev;
+                                }else{
+                                       node = 0;
+                                }
 			}else{
 				prev = node;
 				node = node->next;

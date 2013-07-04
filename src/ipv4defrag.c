@@ -451,7 +451,7 @@ inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 			if ( DEFAULT_IPV4_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
 			{
 				lock_access ( &item->lock );
-				__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT );
+				__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS ); 
 				if (node != prev)
 				{
 				      node = prev;

@@ -55,8 +55,8 @@ typedef struct
 /******************************************************************/
 _HIDDEN phtable_t htable_map ( size_t size );
 _HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val );
-_HIDDEN void *htable_find ( phtable_t ht , unsigned int key );
-_HIDDEN void *htable_remove ( phtable_t ht , unsigned int key );
+_HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void *ip_tuple4 );
+_HIDDEN void *htable_remove ( phtable_t ht , unsigned int key, void *ip_tuple4 );
 _HIDDEN unsigned int htable_count ( phtable_t ht );
 _HIDDEN unsigned int htable_first ( phtable_t ht );
 _HIDDEN void htable_destroy ( phtable_t *ht );

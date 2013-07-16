@@ -150,18 +150,18 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 
 	if ( session->streams != 0 )
 	{
-		if ( htable_find ( session->streams, item->key ) != 0 )
+	  if ( htable_find ( session->streams, item->key, 0 ) != 0 )
 		{
-			htable_remove ( session->streams , item->key );
+		  htable_remove ( session->streams , item->key, 0);
 			sem_post ( &session->max_streams );
 		}
 	}
 
 	if ( session->timewait != 0 )
 	{
-		if ( htable_find ( session->timewait, item->key ) != 0 )
+	  if ( htable_find ( session->timewait, item->key, 0 ) != 0 )
 		{
-			htable_remove ( session->timewait , item->key );
+		  htable_remove ( session->timewait , item->key, 0 );
 			sem_post ( &session->max_timewait );
 		}
 	}
@@ -222,14 +222,14 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	while ( ( first = htable_first ( session->timewait ) ) != 0 )
 	{
-		item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first);
+	  item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first,0);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
 	while ( ( first = htable_first ( session->streams ) ) != 0 )
 	{
-		item = (pntoh_tcp_stream_t)htable_remove(session->streams,first);
+	  item = (pntoh_tcp_stream_t)htable_remove(session->streams,first, 0);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
@@ -530,7 +530,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 	lock_access( &session->lock );
 
-	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key ) ) )
+	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key , 0) ) )
 	{
 		tuplerev.destination = tuple5->source;
 		tuplerev.source = tuple5->destination;
@@ -540,7 +540,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 		key = tcp_getkey( session , &tuplerev );
 
-		ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key );
+		ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key , 0);
 	}
 
 	unlock_access( &session->lock );
@@ -1032,15 +1032,15 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	/* should we add this stream to TIMEWAIT queue? */
 	if ( stream->status == NTOH_STATUS_CLOSING && IS_TIMEWAIT(stream->client , stream->server) )
 	{
-		if ( ! htable_find ( session->timewait , stream->key ) )
+  if ( ! htable_find ( session->timewait , stream->key, 0 ) )
 		{
-			htable_remove ( session->streams , stream->key );
+            htable_remove ( session->streams , stream->key, 0 );
 			sem_post ( &session->max_streams );
 
 			while ( sem_trywait ( &session->max_timewait ) != 0 )
 			{
 				key = htable_first ( session->timewait );
-				twait = htable_remove ( session->timewait , key );
+				twait = htable_remove ( session->timewait , key, 0 );
 				__tcp_free_stream ( session , &twait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
 			}
 

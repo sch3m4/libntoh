@@ -50,14 +50,15 @@ static struct
 inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
 	ntoh_ipv4_key_t ret = 0;
-
+	unsigned int hold = 0;
 	if ( !tuple4 || !session )
 		return ret;
 
 	ret = tuple4->source ^ tuple4->destination;
-	ret ^= ( ret >> 16 ) ^ tuple4->id;
-	ret ^= ( ret >> 8 ) ^ tuple4->protocol;
-	ret &= session->flows->table_size - 1;
+	ret ^= tuple4->id;
+	hold = tuple4->protocol;
+	hold = hold << 16; //skip the id bits
+	ret ^= hold;
 
 	return ret;
 }
@@ -102,8 +103,7 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
 	key = ip_get_hashkey( session , tuple4 );
 
 	lock_access( &session->lock );
-
-	ret = htable_find ( session->flows , key );
+	ret = htable_find ( session->flows , key, tuple4);
 
 	unlock_access( &session->lock );
 
@@ -262,7 +262,7 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	( (pipv4_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	htable_remove ( session->flows , item->key );
+	htable_remove ( session->flows , item->key, &(item->ident) );
 
 	sem_post( &session->max_flows );
 

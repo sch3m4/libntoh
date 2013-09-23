@@ -960,6 +960,10 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	}
 
 	/* check segment seq and ack */
+    
+    if (origin->segments == NULL) 
+        return;
+
 	if ( origin->segments->seq == origin->next_seq && origin->segments->ack == destination->next_seq )
 	{
 		/* unlink the first segment */

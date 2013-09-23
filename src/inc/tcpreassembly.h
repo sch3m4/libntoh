@@ -64,6 +64,13 @@ enum tcprs_who_closed
 	NTOH_CLOSEDBY_SERVER
 };
 
+/** who send the segment */
+enum tcprs_who_sent
+{
+    NTOH_SENT_BY_CLIENT = 0,
+    NTOH_SENT_BY_SERVER
+};
+
 /** @brief key to identify connections **/
 typedef unsigned int ntoh_tcp_key_t;
 

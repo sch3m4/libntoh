@@ -132,10 +132,15 @@ inline static void flush_peer_queues ( pntoh_tcp_session_t session , pntoh_tcp_s
 		while ( peers[i]->segments != 0 )
 		{
 			seg = peers[i]->segments;
-			peers[i]->segments = seg->next;
+            if (i == 0) 
+                seg->origin = NTOH_SENT_BY_CLIENT;
+            else
+                seg->origin = NTOH_SENT_BY_SERVER;
 
-			send_single_segment(session,stream,peers[i],peers[(i+1)%2] , seg , NTOH_REASON_DATA , extra );
-		}
+            peers[i]->segments = seg->next;
+
+            send_single_segment(session,stream,peers[i],peers[(i+1)%2] , seg , NTOH_REASON_DATA , extra );
+        }
 }
 
 /** @brief Remove the stream from the session streams hash table, and notify the user **/
@@ -795,7 +800,7 @@ inline static pntoh_tcp_segment_t new_segment ( unsigned long seq , unsigned lon
 }
 
 /** @brief Sends all possible segments to the user or only the first one **/
-inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , unsigned int ack , unsigned short first , int extra )
+inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , unsigned int ack , unsigned short first , int extra, int who )
 {
 	pntoh_tcp_segment_t 	segment = 0;
 	unsigned int			ret = 0;
@@ -813,7 +818,9 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		if ( ! segment->payload_len )
 			return ret;
 
-		origin->segments = segment->next;
+        segment->origin = who;
+		
+        origin->segments = segment->next;
 
 		send_single_segment ( session , stream , origin , destination , segment , NTOH_REASON_DATA , extra );
 		ret++;
@@ -835,6 +842,8 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		tosend:
 			/* unlink the segment */
 			segment = origin->segments;
+            segment->origin = who;
+
 			origin->segments = segment->next;
 
 			send_single_segment ( session , stream , origin , destination , segment , NTOH_REASON_DATA , extra );
@@ -925,7 +934,7 @@ inline static int handle_new_connection ( pntoh_tcp_stream_t stream , struct tcp
 }
 
 /** @brief Handles the closing of the connection **/
-inline static void handle_closing_connection ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , pntoh_tcp_segment_t segment )
+inline static void handle_closing_connection ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , pntoh_tcp_segment_t segment, int who )
 {
 	static unsigned short count = 0;
 	pntoh_tcp_peer_t	peer = origin;
@@ -936,14 +945,14 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	if ( segment != 0 )
 		queue_segment ( session , origin , segment );
 
-	send_peer_segments ( session , stream , destination , origin , origin->next_seq , 0 , 0 );
+	send_peer_segments ( session , stream , destination , origin , origin->next_seq , 0 , 0, who );
 
 	if ( ! origin->segments )
 		return;
 
 	if ( count++ < 1 )
 	{
-		handle_closing_connection ( session , stream , destination , origin , 0 );
+		handle_closing_connection ( session , stream , destination , origin , 0, who );
 		count = 0;
 	}
 
@@ -1056,7 +1065,7 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 }
 
 /** @brief What to do when an incoming segment arrives to an established connection? **/
-inline static int handle_established_connection ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct tcphdr *tcp , size_t payload_len , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , void *udata )
+inline static int handle_established_connection ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct tcphdr *tcp , size_t payload_len , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , void *udata, int who )
 {
 	pntoh_tcp_segment_t	segment = 0;
 	unsigned long 		seq = ntohl(tcp->th_seq) - origin->isn;
@@ -1066,7 +1075,7 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 	if ( payload_len > 0 )
 	{
 		/* if we have no space */
-		while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW ) > 0 );
+		while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
 
 		/* we're in trouble */
 		if ( origin->totalwin < payload_len )
@@ -1079,7 +1088,7 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 
 	/* ACK the segments of the other side */
 	if ( tcp->th_flags & TH_ACK )
-		send_peer_segments ( session , stream , destination , origin , ack , 0 , 0 );
+		send_peer_segments ( session , stream , destination , origin , ack , 0 , 0, !who );
 
 	/* wants to close the connection */
 	if ( ( tcp->th_flags & (TH_FIN | TH_RST) ) && origin->final_seq == 0 )
@@ -1091,7 +1100,7 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 		segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );
 
 		if ( ! origin->segments )
-			handle_closing_connection ( session , stream , origin , destination , segment );
+			handle_closing_connection ( session , stream , origin , destination , segment, who );
 		else
 			queue_segment ( session , origin , segment );
 	}
@@ -1111,6 +1120,7 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	unsigned int			tstamp = 0;
 	int				ret = NTOH_OK;
 	pntoh_tcp_segment_t		segment = 0;
+    int who;
 
 	if ( !stream || !session )
 		return NTOH_ERROR_PARAMS;
@@ -1166,9 +1176,11 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     {
     	origin = &stream->client;
     	destination = &stream->server;
+        who = NTOH_SENT_BY_CLIENT;
     }else{
     	origin = &stream->server;
     	destination = &stream->client;
+        who = NTOH_SENT_BY_SERVER;
     }
 
     get_timestamp ( tcp , tcphdr_len , &tstamp );
@@ -1235,12 +1247,12 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     		break;
 
     	case NTOH_STATUS_ESTABLISHED:
-    		ret = handle_established_connection ( session , stream , tcp , payload_len , origin , destination , udata );
+    		ret = handle_established_connection ( session , stream , tcp , payload_len , origin , destination , udata, who );
     		break;
 
     	default:
     		segment = new_segment( ntohl ( tcp->th_seq ) - origin->isn , ntohl ( tcp->th_ack ) - origin->ian , payload_len , tcp->th_flags , udata );
-    		handle_closing_connection ( session , stream , origin , destination , segment );
+    		handle_closing_connection ( session , stream , origin , destination , segment, who );
 
     		if ( stream->status == NTOH_STATUS_CLOSED )
     		{

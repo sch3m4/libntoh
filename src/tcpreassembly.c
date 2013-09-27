@@ -284,24 +284,24 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			switch ( item->status )
 			{
 				case NTOH_STATUS_SYNSENT:
-					if ( val > DEFAULT_TCP_SYNSENT_TIMEOUT )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNSENT_TIMEOUT) && (val > DEFAULT_TCP_SYNSENT_TIMEOUT) )
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_SYNRCV:
-					if ( val > DEFAULT_TCP_SYNRCV_TIMEOUT )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNRCV_TIMEOUT) && (val > DEFAULT_TCP_SYNRCV_TIMEOUT) )
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_ESTABLISHED:
-					if ( val > DEFAULT_TCP_ESTABLISHED_TIMEOUT )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT) && (val > DEFAULT_TCP_ESTABLISHED_TIMEOUT) )
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_CLOSING:
-					if ( IS_FINWAIT2(item->client,item->server) && val < DEFAULT_TCP_FINWAIT2_TIMEOUT )
+					if ( IS_FINWAIT2(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_FINWAIT2_TIMEOUT) && (val < DEFAULT_TCP_FINWAIT2_TIMEOUT) )
 						timedout = 1;
-					else if ( IS_TIMEWAIT(item->client,item->server) && val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+					else if ( IS_TIMEWAIT(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) &&  val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )
 						timedout = 1;
 					break;
 			}
@@ -335,7 +335,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			gettimeofday ( &tv , 0 );
 			val = tv.tv_sec - item->last_activ.tv_sec;
 
-			if ( val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+			if ( (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) && val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
 			{
 				lock_access ( &item->lock );
 				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
@@ -554,7 +554,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 }
 
 /** @brief API to create a new TCP stream and add it to the given session **/
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error )
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error, unsigned short enable_check_timeout )
 {
 	pntoh_tcp_stream_t	stream = 0;
 	ntoh_tcp_key_t		key = 0;
@@ -622,6 +622,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->status = stream->client.status = stream->server.status = NTOH_STATUS_CLOSED;
 	stream->function = (void*) function;
 	stream->udata = udata;
+    stream->enable_check_timeout = enable_check_timeout;
 
 	stream->lock.use = 0;
     pthread_mutex_init( &stream->lock.mutex, 0 );

@@ -37,6 +37,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <mysql/mysql.h>
 
 #include "sfhash.h"
 
@@ -193,25 +194,40 @@ typedef struct _tcp_stream_
 typedef htable_t tcprs_streams_table_t;
 typedef phtable_t ptcprs_streams_table_t;
 
+typedef struct mysql_user_ {
+    /*  user */   
+    char *host;
+    char *user;
+    char *passwd;
+    char *db;
+    unsigned int port;
+    char *unix_socket;
+    unsigned long clientflag;
+} mysql_user;
+
 /** @brief TCP session data **/
 typedef struct _tcp_session_
 {
-		struct _tcp_session_ *next;
+    struct _tcp_session_ *next;
 
-        /* max. streams */
-        sem_t max_streams;
-        sem_t max_timewait;
+    /* max. streams */
+    sem_t max_streams;
+    sem_t max_timewait;
 
-        /* connections hash table */
-        ptcprs_streams_table_t streams;
+    /* connections hash table */
+    ptcprs_streams_table_t streams;
 
-        /* TIME-WAIT connections */
-        ptcprs_streams_table_t timewait;
+    /* TIME-WAIT connections */
+    ptcprs_streams_table_t timewait;
 
-	int rand;
+    int rand;
 
-        ntoh_lock_t	lock;
-        pthread_t tID;
+    ntoh_lock_t	lock;
+    pthread_t tID;
+    
+    /* Mysql */
+    MYSQL  *mysql; 
+    int active_mysql;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );
@@ -283,7 +299,7 @@ void ntoh_tcp_exit ( void );
  * @param error Returned error code
  * @return A pointer to the new session or 0 when it fails
  */
-pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error );
+pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error , int active_mysql, mysql_user *mysql_user_info );
 
 /**
  * @brief Releases all resources used by a session

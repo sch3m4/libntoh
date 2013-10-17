@@ -59,7 +59,6 @@ static const char tcp_status[][1024] = {
 		"Time Wait"
 };
 
-
 /** @brief API to get the string description associated to the given value corresponding with a TCP status **/
 const char *ntoh_tcp_get_status ( unsigned int status )
 {
@@ -250,6 +249,11 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	htable_destroy ( &session->streams );
 	htable_destroy ( &session->timewait );
+    
+    if (session->active_mysql) {
+        mysql_close(session->mysql);
+        session->active_mysql = 0;
+    }
 
     free ( session );
 
@@ -359,7 +363,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 
 static void *timeouts_thread ( void *p )
 {
-	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );
+	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );  
 
 	while ( 1 )
 	{
@@ -367,8 +371,8 @@ static void *timeouts_thread ( void *p )
 		pthread_testcancel();
 		poll ( 0 , 0 , DEFAULT_TIMEOUT_DELAY );
 	}
-
-	pthread_exit( 0 );
+	
+    pthread_exit( 0 );
 	//dummy return
 	return 0;
 }
@@ -404,7 +408,7 @@ unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
 }
 
 /** @brief API to create a new session and add it to the global sessions list **/
-pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error )
+pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error, int active_mysql, mysql_user *mysql_user_info )
 {
 	pntoh_tcp_session_t session;
 
@@ -420,6 +424,21 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 			*error = NTOH_ERROR_NOMEM;
 		return 0;
 	}
+
+    session->active_mysql = active_mysql;
+    if (session->active_mysql) {
+        session->mysql = mysql_init(NULL);
+
+        if (!mysql_real_connect(session->mysql, mysql_user_info->host,
+                    mysql_user_info->user, 
+                    mysql_user_info->passwd, 
+                    mysql_user_info->db, 
+                    mysql_user_info->port, 
+                    mysql_user_info->unix_socket, 
+                    mysql_user_info->clientflag)) {
+            printf("mysql_real_connect: %s\n", mysql_error(session->mysql));
+        }
+    }
 
     ntoh_tcp_init();
 

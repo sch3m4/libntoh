@@ -250,11 +250,6 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	htable_destroy ( &session->streams );
 	htable_destroy ( &session->timewait );
     
-    if (session->active_mysql) {
-        mysql_close(session->mysql);
-        session->active_mysql = 0;
-    }
-
     free ( session );
 
     return;
@@ -408,7 +403,7 @@ unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
 }
 
 /** @brief API to create a new session and add it to the global sessions list **/
-pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error, int active_mysql, mysql_user *mysql_user_info )
+pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned int max_timewait , unsigned int *error )
 {
 	pntoh_tcp_session_t session;
 
@@ -424,21 +419,6 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 			*error = NTOH_ERROR_NOMEM;
 		return 0;
 	}
-
-    session->active_mysql = active_mysql;
-    if (session->active_mysql) {
-        session->mysql = mysql_init(NULL);
-
-        if (!mysql_real_connect(session->mysql, mysql_user_info->host,
-                    mysql_user_info->user, 
-                    mysql_user_info->passwd, 
-                    mysql_user_info->db, 
-                    mysql_user_info->port, 
-                    mysql_user_info->unix_socket, 
-                    mysql_user_info->clientflag)) {
-            printf("mysql_real_connect: %s\n", mysql_error(session->mysql));
-        }
-    }
 
     ntoh_tcp_init();
 

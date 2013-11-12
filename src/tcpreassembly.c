@@ -59,7 +59,6 @@ static const char tcp_status[][1024] = {
 		"Time Wait"
 };
 
-
 /** @brief API to get the string description associated to the given value corresponding with a TCP status **/
 const char *ntoh_tcp_get_status ( unsigned int status )
 {
@@ -250,7 +249,7 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	htable_destroy ( &session->streams );
 	htable_destroy ( &session->timewait );
-
+    
     free ( session );
 
     return;
@@ -359,7 +358,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 
 static void *timeouts_thread ( void *p )
 {
-	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );
+	pthread_setcanceltype( PTHREAD_CANCEL_DEFERRED, 0 );  
 
 	while ( 1 )
 	{
@@ -367,8 +366,8 @@ static void *timeouts_thread ( void *p )
 		pthread_testcancel();
 		poll ( 0 , 0 , DEFAULT_TIMEOUT_DELAY );
 	}
-
-	pthread_exit( 0 );
+	
+    pthread_exit( 0 );
 	//dummy return
 	return 0;
 }

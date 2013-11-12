@@ -196,22 +196,22 @@ typedef phtable_t ptcprs_streams_table_t;
 /** @brief TCP session data **/
 typedef struct _tcp_session_
 {
-		struct _tcp_session_ *next;
+    struct _tcp_session_ *next;
 
-        /* max. streams */
-        sem_t max_streams;
-        sem_t max_timewait;
+    /* max. streams */
+    sem_t max_streams;
+    sem_t max_timewait;
 
-        /* connections hash table */
-        ptcprs_streams_table_t streams;
+    /* connections hash table */
+    ptcprs_streams_table_t streams;
 
-        /* TIME-WAIT connections */
-        ptcprs_streams_table_t timewait;
+    /* TIME-WAIT connections */
+    ptcprs_streams_table_t timewait;
 
-	int rand;
+    int rand;
 
-        ntoh_lock_t	lock;
-        pthread_t tID;
+    ntoh_lock_t	lock;
+    pthread_t tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );

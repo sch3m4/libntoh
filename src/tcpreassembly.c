@@ -837,8 +837,12 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		{
 			extra = NTOH_REASON_OOO;
 			goto tosend;
-		}else
-			break;
+		}else {
+			printf("hit\n");
+            
+            //break;
+            goto tosend;
+        }
 
 		tosend:
 			/* unlink the segment */
@@ -1076,11 +1080,11 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 	if ( payload_len > 0 )
 	{
 		/* if we have no space */
-		while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
+		//while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
 
 		/* we're in trouble */
-		if ( origin->totalwin < payload_len )
-			return NTOH_NO_WINDOW_SPACE_LEFT;
+		//if ( origin->totalwin < payload_len )
+		//	return NTOH_NO_WINDOW_SPACE_LEFT;
 
 		/* creates a new segment and push it into the queue */
 		segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );

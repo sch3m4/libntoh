@@ -837,7 +837,7 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 			extra = NTOH_REASON_OOO;
 			goto tosend;
 		}else {
-			extra = NTOH_REASON_XXX;
+			printf("hit\n");
             
             //break;     //之前的处理是后面都不处理，在测试POST上传文件时出现问题(文件不完整)
                          //现在添加一个新的选项继续处理，但是这个选项后续怎么处理

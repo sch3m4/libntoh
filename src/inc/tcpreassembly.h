@@ -188,6 +188,7 @@ typedef struct _tcp_stream_
 	ntoh_lock_t	lock;
     ///
     unsigned short enable_check_timeout;
+    unsigned short enable_check_nowindow;
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
 typedef htable_t tcprs_streams_table_t;
@@ -318,7 +319,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
  * @param enable_tcp_established_timeout check idle time for established connections 
  * @return A pointer to the new stream on success or 0 when fails
  */
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error, unsigned short enable_check_timeout );
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error, unsigned short enable_check_timeout, unsigned short enable_check_nowindow );
 
 /**
  * @brief Returns the total count of TCP streams stored in the global hash table

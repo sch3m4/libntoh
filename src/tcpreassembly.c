@@ -553,7 +553,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 }
 
 /** @brief API to create a new TCP stream and add it to the given session **/
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error, unsigned short enable_check_timeout )
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function ,void *udata , unsigned int *error, unsigned short enable_check_timeout, unsigned short enable_check_nowindow )
 {
 	pntoh_tcp_stream_t	stream = 0;
 	ntoh_tcp_key_t		key = 0;
@@ -622,6 +622,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->function = (void*) function;
 	stream->udata = udata;
     stream->enable_check_timeout = enable_check_timeout;
+    stream->enable_check_nowindow = enable_check_nowindow;
 
 	stream->lock.use = 0;
     pthread_mutex_init( &stream->lock.mutex, 0 );
@@ -1079,22 +1080,24 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 
 	/* only store segments with data */
 	if ( payload_len > 0 )
-	{
-		/* if we have no space */
-		//while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
+    {
+        if (stream->enable_check_nowindow) {
+            /* if we have no space */
+            while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
 
-		/* we're in trouble */
-		//if ( origin->totalwin < payload_len )
-		//	return NTOH_NO_WINDOW_SPACE_LEFT;
+            /* we're in trouble */
+            if ( origin->totalwin < payload_len )
+                return NTOH_NO_WINDOW_SPACE_LEFT;
+        }
 
-		/* creates a new segment and push it into the queue */
-		segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );
-		queue_segment ( session , origin , segment );
-	}
+        /* creates a new segment and push it into the queue */
+        segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );
+        queue_segment ( session , origin , segment );
+    }
 
-	/* ACK the segments of the other side */
-	if ( tcp->th_flags & TH_ACK )
-		send_peer_segments ( session , stream , destination , origin , ack , 0 , 0, !who );
+    /* ACK the segments of the other side */
+    if ( tcp->th_flags & TH_ACK )
+        send_peer_segments ( session , stream , destination , origin , ack , 0 , 0, !who );
 
 	/* wants to close the connection */
 	if ( ( tcp->th_flags & (TH_FIN | TH_RST) ) && origin->final_seq == 0 )

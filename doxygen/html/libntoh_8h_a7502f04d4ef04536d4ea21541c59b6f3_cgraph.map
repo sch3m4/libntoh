@@ -1,7 +1,0 @@
-<map id="ntoh_exit" name="ntoh_exit">
-<area shape="rect" id="node3" href="$ipv4defrag_8h.html#adb63592a0e2a53aec9fae9e117a681a1" title="Flush all IPv4 sessions and release all resources." alt="" coords="136,30,251,58"/>
-<area shape="rect" id="node11" href="$tcpreassembly_8h.html#acc49e434765b814f51b6dabe2674685e" title="Releases all resources used by TCP reassembly." alt="" coords="140,81,247,109"/>
-<area shape="rect" id="node5" href="$common_8c.html#ab8024524b714910991a7d79bde93f199" title="free_lockaccess" alt="" coords="299,5,421,33"/>
-<area shape="rect" id="node7" href="$common_8c.html#a1579fef3fe6e4c65c942e466eec843d3" title="Access locking." alt="" coords="311,55,409,83"/>
-<area shape="rect" id="node9" href="$common_8c.html#a92d9fbe00c13db099d251803e05fdd70" title="Access unlocking." alt="" coords="303,106,417,134"/>
-</map>

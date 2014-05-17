@@ -1,6 +1,0 @@
-<map id="ntoh_tcp_new_session" name="ntoh_tcp_new_session">
-<area shape="rect" id="node3" href="$common_8c.html#a96c12e2453d77fec621b2e4c2ec3383f" title="htable_map" alt="" coords="227,5,325,33"/>
-<area shape="rect" id="node5" href="$common_8c.html#a1579fef3fe6e4c65c942e466eec843d3" title="Access locking." alt="" coords="227,55,325,83"/>
-<area shape="rect" id="node7" href="$tcpreassembly_8h.html#af5367c35ffb190e722fb47047c270412" title="Initializes all needed resources for TCP reassembly." alt="" coords="224,106,328,134"/>
-<area shape="rect" id="node9" href="$common_8c.html#a92d9fbe00c13db099d251803e05fdd70" title="Access unlocking." alt="" coords="219,157,333,185"/>
-</map>

@@ -1,4 +1,0 @@
-<map id="ntoh_init" name="ntoh_init">
-<area shape="rect" id="node3" href="$ipv4defrag_8h.html#a8fd4011f06ea8b38964d324be07cf35e" title="Initializes the IPv4 defragmentation." alt="" coords="132,5,241,33"/>
-<area shape="rect" id="node5" href="$tcpreassembly_8h.html#af5367c35ffb190e722fb47047c270412" title="Initializes all needed resources for TCP reassembly." alt="" coords="135,55,239,83"/>
-</map>

@@ -1,4 +1,0 @@
-<map id="htable_insert" name="htable_insert">
-<area shape="rect" id="node3" href="$ipv4defrag_8c.html#a6b71240da1885ddbd1cff5927f2434c0" title="Adds a new IPv4 flow." alt="" coords="168,5,315,33"/>
-<area shape="rect" id="node5" href="$tcpreassembly_8c.html#a64c31b54fcf6a20a290afc565f55fde5" title="API to create a new TCP stream and add it to the given session." alt="" coords="160,55,323,83"/>
-</map>

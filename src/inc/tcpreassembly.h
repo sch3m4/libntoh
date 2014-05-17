@@ -64,6 +64,27 @@ enum tcprs_who_closed
 	NTOH_CLOSEDBY_SERVER
 };
 
+/** @brief who send the segment */
+enum tcprs_who_sent
+{
+    NTOH_SENT_BY_CLIENT = 0,
+    NTOH_SENT_BY_SERVER
+};
+
+/** @brief Control switch */
+enum check_timeout
+{
+    NTOH_CHECK_TCP_SYNSENT_TIMEOUT = (1 << 0),
+    
+    NTOH_CHECK_TCP_SYNRCV_TIMEOUT = (1 << 1),
+
+    NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT = (1 << 2),
+
+    NTOH_CHECK_TCP_FINWAIT2_TIMEOUT = (1 << 3),
+
+    NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT = (1 << 4),
+};
+
 /** @brief key to identify connections **/
 typedef unsigned int ntoh_tcp_key_t;
 
@@ -165,6 +186,9 @@ typedef struct _tcp_stream_
 	///user-defined data linked to this stream
 	void *udata;
 	ntoh_lock_t	lock;
+    ///
+    unsigned short enable_check_timeout;
+    unsigned short enable_check_nowindow;
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
 typedef htable_t tcprs_streams_table_t;
@@ -173,29 +197,29 @@ typedef phtable_t ptcprs_streams_table_t;
 /** @brief TCP session data **/
 typedef struct _tcp_session_
 {
-		struct _tcp_session_ *next;
+    struct _tcp_session_ *next;
 
-        /* max. streams */
-        sem_t max_streams;
-        sem_t max_timewait;
+    /* max. streams */
+    sem_t max_streams;
+    sem_t max_timewait;
 
-        /* connections hash table */
-        ptcprs_streams_table_t streams;
+    /* connections hash table */
+    ptcprs_streams_table_t streams;
 
-        /* TIME-WAIT connections */
-        ptcprs_streams_table_t timewait;
+    /* TIME-WAIT connections */
+    ptcprs_streams_table_t timewait;
 
-	int rand;
+    int rand;
 
-        ntoh_lock_t	lock;
-        pthread_t tID;
+    ntoh_lock_t	lock;
+    pthread_t tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );
 
 /** @brief max allowed connections **/
 #ifndef DEFAULT_TCP_MAX_STREAMS
-# define DEFAULT_TCP_MAX_STREAMS 1024
+# define DEFAULT_TCP_MAX_STREAMS 4096
 #endif
 
 /** @brief max SYN retries **/
@@ -292,9 +316,10 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
  * @param function User defined function to receive the segments of this stream
  * @param udata User-defined data to be linked to the new stream
  * @param error Returned error code
+ * @param enable_tcp_established_timeout check idle time for established connections 
  * @return A pointer to the new stream on success or 0 when fails
  */
-pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error );
+pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error, unsigned short enable_check_timeout, unsigned short enable_check_nowindow );
 
 /**
  * @brief Returns the total count of TCP streams stored in the global hash table

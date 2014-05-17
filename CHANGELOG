@@ -1,3 +1,20 @@
+libntoh (0.4.1a)
+	* Contributions made by: Eosis - https://github.com/Eosis
+	*	MAJOR: Fixed linked list problem seen if there was only one item in the list 
+	*	MAJOR: Fixed problem caused by ipv4 hash collisions 
+	*
+	* Contributions made by: di3online - https://github.com/di3online
+	*	MINOR: Modified DEFAULT_TCP_MAX_STREAMS to 4096 (connections)
+	*	MINOR: Optional connection timeout verification (for SYN , SYN + ACK and Established connections)
+	*	MINOR: Added shortcut to get packet origin (segment->origin = NTOH_SENT_BY_CLIENT || NTOH_SENT_BY_SERVER)
+	*	MINOR: compilation as static library
+	* 
+	* Contributions made by: harjotgill - https://github.com/harjotgill
+	*	MEDIUM: Fixed issue caused when source and destination addresses are the same (localhost)
+	*
+	
+	-- Chema Garcia <chema@safetybits.net> (xx/xx/20xx)
+
 libntoh (0.4a)
 
 	* Added DEFAULT_TIMEOUT_DELAY, delay value to check connections timeout

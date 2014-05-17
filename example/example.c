@@ -28,6 +28,10 @@
  * POSSIBILITY OF SUCH DAMAGE.                                                  *
  ********************************************************************************/
 
+/*
+ * NOTE: THIS CODE HAS NOT BEEN UPDATED SINCE LIBNTOH VERSION 0.4a
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

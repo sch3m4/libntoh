@@ -64,14 +64,16 @@ enum tcprs_who_closed
 	NTOH_CLOSEDBY_SERVER
 };
 
-/** @brief who send the segment */
+// @contrib: di3online - https://github.com/di3online
+/** @brief who send the segment **/
 enum tcprs_who_sent
 {
     NTOH_SENT_BY_CLIENT = 0,
     NTOH_SENT_BY_SERVER
 };
 
-/** @brief Control switch */
+// @contrib: di3online - https://github.com/di3online
+/** @brief Control switch **/
 enum check_timeout
 {
     NTOH_CHECK_TCP_SYNSENT_TIMEOUT = (1 << 0),
@@ -92,70 +94,70 @@ typedef unsigned int ntoh_tcp_key_t;
 typedef struct
 {
 	///source address
-	unsigned int source;
+	unsigned int 	source;
 	///destination address
-	unsigned int destination;
+	unsigned int 	destination;
 	///source port
-	unsigned short sport;
+	unsigned short 	sport;
 	///destination port
-	unsigned short dport;
+	unsigned short 	dport;
 	///protocol
-	unsigned short protocol;
+	unsigned short 	protocol;
 } ntoh_tcp_tuple5_t, *pntoh_tcp_tuple5_t;
 
 /** @brief data sent to user-function **/
 typedef struct _tcp_segment_
 {
-	struct _tcp_segment_ *next;
+	struct _tcp_segment_ 	*next;
 	///SEQ number
-	unsigned long seq;
+	unsigned long 			seq;
 	///ACK number
-	unsigned long ack;
+	unsigned long 			ack;
 	///flags
-	unsigned char flags;
+	unsigned char 			flags;
 	///payload length
-	unsigned int payload_len;
+	unsigned int 			payload_len;
 	///segment origin
-	unsigned short origin;
+	unsigned short 			origin;
 	///TCP timestamp
-	struct timeval tv;
+	struct timeval 			tv;
 	///user provided data
-	void *user_data;
+	void 					*user_data;
 } ntoh_tcp_segment_t, *pntoh_tcp_segment_t;
 
 /** @brief peer information **/
 typedef struct
 {
 	///IP address
-	unsigned int addr;
+	unsigned int 		addr;
 	///connection port
-	unsigned short port;
-	///first SEQ. number
-	unsigned long isn;
-	///first ACK. number
-	unsigned long ian;
+	unsigned short 		port;
+	///initial SEQ. number
+	unsigned long 		isn;
+	///initial ACK. number
+	unsigned long 		ian;
 	///NEXT SEQ. number
-	unsigned long next_seq;
+	unsigned long 		next_seq;
 	///TH_FIN | TH_RST sequence
-	unsigned long final_seq;
+	unsigned long 		final_seq;
 	///TCP window size
-	unsigned int wsize;
+	unsigned int 		wsize;
 	///peer status
-	unsigned int status;
+	unsigned int 		status;
 	///segments list
 	pntoh_tcp_segment_t segments;
 	///Max. Segment Size
-	unsigned int mss;
+	unsigned int 		mss;
 	///Selective ACK.
-	unsigned int sack;
+	unsigned int 		sack;
 	///window scale factor
-	unsigned int wscale;
+	unsigned int 		wscale;
 	///total window size
-	unsigned long totalwin;
+	unsigned long 		totalwin;
 	///last ts
-	unsigned int lastts;
+	unsigned int 		lastts;
 	///send peer segments to user?
-	unsigned short receive;
+	unsigned short 		receive;
 } ntoh_tcp_peer_t, *pntoh_tcp_peer_t;
 
 /** @brief connection data **/
@@ -164,31 +166,31 @@ typedef struct _tcp_stream_
 	struct _tcp_stream_ *next;
 
 	///data to generate the key to identify the connection
-	ntoh_tcp_tuple5_t tuple;
+	ntoh_tcp_tuple5_t 	tuple;
 	///client data
-	ntoh_tcp_peer_t client;
+	ntoh_tcp_peer_t 	client;
 	///server data
-	ntoh_tcp_peer_t server;
+	ntoh_tcp_peer_t 	server;
 	///connection key
-	ntoh_tcp_key_t key;
+	ntoh_tcp_key_t 		key;
 	///connection status
-	unsigned int status;
+	unsigned int 		status;
 	///who closed the connection
-	unsigned short closedby;
+	unsigned short 		closedby;
 	///user-defined function to receive data
-	void *function;
+	void 				*function;
 	///last activity
-	struct timeval last_activ;
+	struct timeval 		last_activ;
 	///max. allowed SYN retries
-	unsigned int syn_retries;
+	unsigned int 		syn_retries;
 	///max. allowed SYN/ACK retries
-	unsigned int synack_retries;
+	unsigned int 		synack_retries;
 	///user-defined data linked to this stream
-	void *udata;
-	ntoh_lock_t	lock;
-    ///
-    unsigned short enable_check_timeout;
-    unsigned short enable_check_nowindow;
+	void 				*udata;
+	ntoh_lock_t			lock;
+
+    unsigned short 		enable_check_timeout;	// @contrib: di3online - https://github.com/di3online
+    unsigned short 		enable_check_nowindow;	// @contrib: di3online - https://github.com/di3online
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
 typedef htable_t tcprs_streams_table_t;
@@ -197,22 +199,22 @@ typedef phtable_t ptcprs_streams_table_t;
 /** @brief TCP session data **/
 typedef struct _tcp_session_
 {
-    struct _tcp_session_ *next;
+    struct _tcp_session_ 	*next;
 
     /* max. streams */
-    sem_t max_streams;
-    sem_t max_timewait;
+    sem_t 					max_streams;
+    sem_t 					max_timewait;
 
     /* connections hash table */
-    ptcprs_streams_table_t streams;
+    ptcprs_streams_table_t 	streams;
 
     /* TIME-WAIT connections */
-    ptcprs_streams_table_t timewait;
+    ptcprs_streams_table_t 	timewait;
 
-    int rand;
+    int 					rand;
 
-    ntoh_lock_t	lock;
-    pthread_t tID;
+    ntoh_lock_t				lock;
+    pthread_t 				tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );
@@ -316,7 +318,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
  * @param function User defined function to receive the segments of this stream
  * @param udata User-defined data to be linked to the new stream
  * @param error Returned error code
- * @param enable_tcp_established_timeout check idle time for established connections 
+ * @param enable_tcp_established_timeout check idle time for established connections // @contrib: di3online - https://github.com/di3online
  * @return A pointer to the new stream on success or 0 when fails
  */
 pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error, unsigned short enable_check_timeout, unsigned short enable_check_nowindow );

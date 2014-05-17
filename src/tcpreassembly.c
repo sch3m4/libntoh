@@ -283,24 +283,24 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			switch ( item->status )
 			{
 				case NTOH_STATUS_SYNSENT:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNSENT_TIMEOUT) && (val > DEFAULT_TCP_SYNSENT_TIMEOUT) )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNSENT_TIMEOUT) && (val > DEFAULT_TCP_SYNSENT_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_SYNRCV:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNRCV_TIMEOUT) && (val > DEFAULT_TCP_SYNRCV_TIMEOUT) )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNRCV_TIMEOUT) && (val > DEFAULT_TCP_SYNRCV_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_ESTABLISHED:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT) && (val > DEFAULT_TCP_ESTABLISHED_TIMEOUT) )
+					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT) && (val > DEFAULT_TCP_ESTABLISHED_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
 						timedout = 1;
 					break;
 
 				case NTOH_STATUS_CLOSING:
-					if ( IS_FINWAIT2(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_FINWAIT2_TIMEOUT) && (val < DEFAULT_TCP_FINWAIT2_TIMEOUT) )
+					if ( IS_FINWAIT2(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_FINWAIT2_TIMEOUT) && (val < DEFAULT_TCP_FINWAIT2_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
 						timedout = 1;
-					else if ( IS_TIMEWAIT(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) &&  val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+					else if ( IS_TIMEWAIT(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) &&  val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
 						timedout = 1;
 					break;
 			}
@@ -310,12 +310,11 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			{
 				lock_access ( &item->lock );
 				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+				// @contrib: Eosis - https://github.com/Eosis
 				if (node != prev)
-				{
-                                       node = prev;
-                                }else{
-                                       node = 0;
-                                }
+					node = prev;
+				else
+					node = 0;
 			}else{
 				prev = node;
 				node = node->next;
@@ -334,7 +333,7 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 			gettimeofday ( &tv , 0 );
 			val = tv.tv_sec - item->last_activ.tv_sec;
 
-			if ( (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) && val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )
+			if ( (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) && val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
 			{
 				lock_access ( &item->lock );
 				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
@@ -621,8 +620,8 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->status = stream->client.status = stream->server.status = NTOH_STATUS_CLOSED;
 	stream->function = (void*) function;
 	stream->udata = udata;
-    stream->enable_check_timeout = enable_check_timeout;
-    stream->enable_check_nowindow = enable_check_nowindow;
+    stream->enable_check_timeout = enable_check_timeout;// @contrib: di3online - https://github.com/di3online
+    stream->enable_check_nowindow = enable_check_nowindow;// @contrib: di3online - https://github.com/di3online
 
 	stream->lock.use = 0;
     pthread_mutex_init( &stream->lock.mutex, 0 );
@@ -819,7 +818,7 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		if ( ! segment->payload_len )
 			return ret;
 
-        segment->origin = who;
+        segment->origin = who;// @contrib: di3online - https://github.com/di3online
 		
         origin->segments = segment->next;
 
@@ -837,19 +836,19 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		{
 			extra = NTOH_REASON_OOO;
 			goto tosend;
-		}else {
+		}else { // @contrib: di3online - https://github.com/di3online
 			extra = NTOH_REASON_XXX;
-            
-            //break;     //之前的处理是后面都不处理，在测试POST上传文件时出现问题(文件不完整)
-                         //现在添加一个新的选项继续处理，但是这个选项后续怎么处理
-                         //比如window 参考OOO 并没有做
+			// break; // before treatment is not followed by processing problems in testing POST uploaded file (incomplete)
+			          // Add a new option to continue treatment now, but this option is how to deal with the follow-up
+			          // For example, a reference window OOO did not do
+
             goto tosend;
         }
 
 		tosend:
 			/* unlink the segment */
 			segment = origin->segments;
-            segment->origin = who;
+            segment->origin = who;// @contrib: di3online - https://github.com/di3online
 
 			origin->segments = segment->next;
 
@@ -954,7 +953,7 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 
 	send_peer_segments ( session , stream , destination , origin , origin->next_seq , 0 , 0, who );
 
-	if ( ! origin->segments )
+	if ( ! origin->segments )// @contrib: di3online - https://github.com/di3online
 		return;
 
 	if ( count++ < 1 )
@@ -1081,7 +1080,8 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 	/* only store segments with data */
 	if ( payload_len > 0 )
     {
-        if (stream->enable_check_nowindow) {
+        if (stream->enable_check_nowindow) // @contrib: di3online - https://github.com/di3online
+        {
             /* if we have no space */
             while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
 
@@ -1120,16 +1120,16 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 /** @brief API for add an incoming segment **/
 int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct ip *ip , size_t len , void *udata )
 {
-	size_t				iphdr_len = 0;
-	size_t				tcphdr_len = 0;
-	size_t				payload_len = 0;
+	size_t					iphdr_len = 0;
+	size_t					tcphdr_len = 0;
+	size_t					payload_len = 0;
 	struct tcphdr			*tcp = 0;
 	pntoh_tcp_peer_t		origin = 0;
 	pntoh_tcp_peer_t		destination = 0;
 	unsigned int			tstamp = 0;
-	int				ret = NTOH_OK;
+	int						ret = NTOH_OK;
 	pntoh_tcp_segment_t		segment = 0;
-    int who;
+    int						who;// @contrib: di3online - https://github.com/di3online
 
 	if ( !stream || !session )
 		return NTOH_ERROR_PARAMS;
@@ -1181,15 +1181,15 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
     payload_len = ntohs(ip->ip_len) - iphdr_len - tcphdr_len;
 
     /* get origin and destination */
-    if ( stream->tuple.source == ip->ip_src.s_addr )
+    if ( stream->tuple.source == ip->ip_src.s_addr && stream->tuple.sport == tcp->th_sport ) // @contrib: harjotgill - https://github.com/harjotgill
     {
     	origin = &stream->client;
     	destination = &stream->server;
-        who = NTOH_SENT_BY_CLIENT;
+        who = NTOH_SENT_BY_CLIENT;// @contrib: di3online - https://github.com/di3online
     }else{
     	origin = &stream->server;
     	destination = &stream->client;
-        who = NTOH_SENT_BY_SERVER;
+        who = NTOH_SENT_BY_SERVER;// @contrib: di3online - https://github.com/di3online
     }
 
     get_timestamp ( tcp , tcphdr_len , &tstamp );

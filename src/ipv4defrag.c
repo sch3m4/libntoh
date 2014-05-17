@@ -54,6 +54,7 @@ inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pn
 	if ( !tuple4 || !session )
 		return ret;
 
+	// @contrib: Eosis - https://github.com/Eosis
 	ret = tuple4->source ^ tuple4->destination;
 	ret ^= tuple4->id;
 	hold = tuple4->protocol;

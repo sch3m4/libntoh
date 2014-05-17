@@ -57,35 +57,35 @@ typedef struct _ipv4_fragment_
 	/// pointer to the next fragment
 	struct _ipv4_fragment_ *next;
 	/// fragment offset
-	unsigned int offset;
+	unsigned int 			offset;
 	/// fragment data length
-	unsigned int len;
+	unsigned int 			len;
 	/// fragment data
-	unsigned char *data;
+	unsigned char 			*data;
 } ntoh_ipv4_fragment_t , *pntoh_ipv4_fragment_t;
 
 /** @brief Struct to store the information of each IPv4 flow */
 typedef struct
 {
 	/// flow identification data
-	ntoh_ipv4_tuple4_t ident;
+	ntoh_ipv4_tuple4_t 		ident;
 	/// flow key
-	ntoh_ipv4_key_t key;
+	ntoh_ipv4_key_t 		key;
 	/// fragments list
-	pntoh_ipv4_fragment_t fragments;
+	pntoh_ipv4_fragment_t 	fragments;
 	/// total amount of received data
-	size_t meat;
+	size_t 					meat;
 	/// total amount of expected data
-	size_t total;
+	size_t 					total;
 	/// final fragment received?
-	struct ip *final_iphdr;
+	struct ip 				*final_iphdr;
 	/// user defined function to receive defragmented packets
-	void *function;
+	void 					*function;
 	/// last activity
-	struct timeval last_activ;
+	struct timeval 			last_activ;
 	/// user-defined data
-	void *udata;
-	ntoh_lock_t lock;
+	void 					*udata;
+	ntoh_lock_t 			lock;
 } ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;
 
 typedef htable_t ipv4_flows_table_t;
@@ -94,16 +94,16 @@ typedef phtable_t pipv4_flows_table_t;
 /** @brief Structure to store global parameters */
 typedef struct _ipv4_session_
 {
-	struct _ipv4_session_ *next;
+	struct _ipv4_session_ 	*next;
 
 	/// max. number of IP flows
-	sem_t max_flows;
-	sem_t max_fragments;
+	sem_t 					max_flows;
+	sem_t 					max_fragments;
 	/// hash table to store IP flows
-	pipv4_flows_table_t flows;
+	pipv4_flows_table_t 	flows;
 	/// connection tables related
-	pthread_t tID;
-	ntoh_lock_t lock;
+	pthread_t 				tID;
+	ntoh_lock_t 			lock;
 }ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
 
 /// min. PMTU

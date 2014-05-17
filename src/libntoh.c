@@ -82,6 +82,7 @@ static const char reason_descriptions[][30]=
 		"Timedout" ,
 		"Exiting" ,
 		"Out-Of-Order" ,
+		"Not really sure...", // about
 		"Max. SYN retries reached" ,
 		"Max. SYN/ACK retries reached" ,
 		"Synchronization",
@@ -113,7 +114,7 @@ const char* ntoh_get_retval_desc ( int val )
 {
 	unsigned int pos = (unsigned int)(val * (-1));
 
-	if ( pos > 25 )
+	if ( pos > (sizeof(retval_descriptions) / sizeof(*retval_descriptions) ) )
 		return 0;
 
 	return retval_descriptions[pos];
@@ -121,7 +122,7 @@ const char* ntoh_get_retval_desc ( int val )
 
 const char* ntoh_get_reason ( unsigned int val )
 {
-	if ( !val || val > 13 )
+	if ( !val || val > (sizeof(reason_descriptions) / sizeof(*reason_descriptions)) )
 		return 0;
 
 	return reason_descriptions[val - 1];
@@ -129,7 +130,7 @@ const char* ntoh_get_reason ( unsigned int val )
 
 const char* ntoh_get_errdesc ( unsigned int val )
 {
-	if ( val > 7 )
+	if ( val > (sizeof(api_errors) / sizeof(*api_errors)) )
 		return 0;
 
 	return api_errors[val];

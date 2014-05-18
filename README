@@ -1,13 +1,14 @@
 Getting the source
 ==================
 
-$ git clone git://github.com/sch3m4/libntoh.git ~/libntoh-ro
-Cloning into '/home/<user>/libntoh-ro'...
-remote: Counting objects: 70, done.
-remote: Compressing objects: 100% (64/64), done.
-remote: Total 70 (delta 31), reused 34 (delta 2)
-Receiving objects: 100% (70/70), 46.61 KiB | 39 KiB/s, done.
-Resolving deltas: 100% (31/31), done.
+$ git clone git://github.com/sch3m4/libntoh.git
+Cloning into 'libntoh'...
+remote: Reusing existing pack: 732, done.
+remote: Counting objects: 33, done.
+remote: Compressing objects: 100% (33/33), done.
+remote: Total 765 (delta 12), reused 0 (delta 0)
+Receiving objects: 100% (765/765), 1009.13 KiB | 416 KiB/s, done.
+Resolving deltas: 100% (341/341), done.
 $
 
 
@@ -31,7 +32,7 @@ To successfully compile libntoh you only need gcc, make, cmake, pkg-config and l
 
 Debian-like OS:
 
-	$ sudo apt-get install cmake libpthread-dev gcc make build-essential pkg-config
+	$ sudo apt-get install cmake libpthread-dev gcc make build-essential pkg-config swig
 
 If you want to generate the source code documentation, you will also need doxygen:
 
@@ -46,19 +47,93 @@ You need CMake to compile libntoh and ntohexample.
 Compilation instructions
 ========================
 
+$ cd libntoh/src
 ../src$ mkdir build
 ../src$ cd build
-../src/build$ cmake ../
-(...)
+../src/build$ cmake ..
+-- The C compiler identification is GNU 4.7.2
+-- The CXX compiler identification is GNU 4.7.2
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/c++
+-- Check for working CXX compiler: /usr/bin/c++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Looking for include file pthread.h
+-- Looking for include file pthread.h - found
+-- Looking for pthread_create
+-- Looking for pthread_create - not found.
+-- Looking for pthread_create in pthreads
+-- Looking for pthread_create in pthreads - not found
+-- Looking for pthread_create in pthread
+-- Looking for pthread_create in pthread - found
+-- Found Threads: TRUE  
+-- Found SWIG: /usr/bin/swig2.0 (found version "2.0.7") 
+-- Found PythonLibs: /usr/lib/libpython2.7.so (found suitable version "2.7.3", required is "2.7") 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /tmp/libntoh/src/build
 ../src/build$ make
-(...)
+[  8%] Swig source
+Scanning dependencies of target _libntoh
+[ 16%] Building C object CMakeFiles/_libntoh.dir/libntohPYTHON_wrap.c.o
+/tmp/libntoh/src/build/libntohPYTHON_wrap.c: In function ‘init_libntoh’:
+/tmp/libntoh/src/build/libntohPYTHON_wrap.c:10410:21: warning: variable ‘md’ set but not used [-Wunused-but-set-variable]
+[ 25%] Building C object CMakeFiles/_libntoh.dir/libntoh.c.o
+[ 33%] Building C object CMakeFiles/_libntoh.dir/tcpreassembly.c.o
+[ 41%] Building C object CMakeFiles/_libntoh.dir/ipv4defrag.c.o
+[ 50%] Building C object CMakeFiles/_libntoh.dir/common.c.o
+[ 58%] Building C object CMakeFiles/_libntoh.dir/sfhash.c.o
+Linking C shared module _libntoh.so
+[ 58%] Built target _libntoh
+Scanning dependencies of target ntoh
+[ 66%] Building C object CMakeFiles/ntoh.dir/libntoh.c.o
+[ 75%] Building C object CMakeFiles/ntoh.dir/tcpreassembly.c.o
+[ 83%] Building C object CMakeFiles/ntoh.dir/ipv4defrag.c.o
+[ 91%] Building C object CMakeFiles/ntoh.dir/common.c.o
+[100%] Building C object CMakeFiles/ntoh.dir/sfhash.c.o
+Linking C shared library libntoh.so
+[100%] Built target ntoh
 ../src/build$ sudo make install
 [sudo] password for sch3m4: 
-(...)
+[sudo] password for chema: 
+[ 58%] Built target _libntoh
+[100%] Built target ntoh
+Install the project...
+-- Install configuration: "Release"
+-- Installing: /usr/local/lib/libntoh.so
+-- Installing: /usr/local/include/libntoh/libntoh.h
+-- Installing: /usr/local/include/libntoh/tcpreassembly.h
+-- Installing: /usr/local/include/libntoh/sfhash.h
+-- Installing: /usr/local/include/libntoh/ipv4defrag.h
+-- Installing: /usr/local/include/libntoh/common.h
+-- Installing: /usr/local/lib/pkgconfig/ntoh.pc
+-- Installing: /usr/lib/python2.7/dist-packages/_libntoh.so
+-- Installing: /usr/lib/python2.7/dist-packages/libntoh.py
 ../src/build$
 
 For a more detailed description refer to
 	https://github.com/sch3m4/libntoh/wiki	
+	
+
+Python Wrapper
+==============
+
+Once you have installed libntoh, you can use the python wrapper to comunicate with the library as follows:
+
+~$ python
+Python 2.7.3 (default, Mar 14 2014, 11:57:14) 
+[GCC 4.7.2] on linux2
+Type "help", "copyright", "credits" or "license" for more information.
+>>> from libntoh import ntoh_version
+>>> print ntoh_version()
+0.4a
+>>> quit()
+~$
+
+A more complete example will be added soon.
 	
 
 "ntohexample" Compilation instructions

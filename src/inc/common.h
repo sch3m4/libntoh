@@ -53,19 +53,19 @@ typedef struct
 /******************************************************************/
 /** Hash Table implementation (collision resolution by chaining) **/
 /******************************************************************/
-_HIDDEN phtable_t htable_map ( size_t size );
-_HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val );
-_HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void *ip_tuple4 );
-_HIDDEN void *htable_remove ( phtable_t ht , unsigned int key, void *ip_tuple4 );
-_HIDDEN unsigned int htable_count ( phtable_t ht );
-_HIDDEN unsigned int htable_first ( phtable_t ht );
-_HIDDEN void htable_destroy ( phtable_t *ht );
+phtable_t htable_map ( size_t size );
+int htable_insert ( phtable_t ht  , unsigned int key , void *val );
+void *htable_find ( phtable_t ht , unsigned int key, void *ip_tuple4 );
+void *htable_remove ( phtable_t ht , unsigned int key, void *ip_tuple4 );
+unsigned int htable_count ( phtable_t ht );
+unsigned int htable_first ( phtable_t ht );
+void htable_destroy ( phtable_t *ht );
 
 
 /** @brief Access locking **/
-_HIDDEN void lock_access ( pntoh_lock_t lock );
+void lock_access ( pntoh_lock_t lock );
 /** @brief Access unlocking **/
-_HIDDEN void unlock_access ( pntoh_lock_t lock );
-_HIDDEN void free_lockaccess ( pntoh_lock_t lock );
+void unlock_access ( pntoh_lock_t lock );
+void free_lockaccess ( pntoh_lock_t lock );
 
 #endif /* __LIBNTOH_COMMON_H__ */

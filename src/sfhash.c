@@ -1,4 +1,5 @@
 #include <sfhash.h>
+#include <libntoh.h>
 
 #define get16bits(d) (*((const unsigned short *) (d)))
 
@@ -6,7 +7,7 @@
  * of bytes.  No alignment or length assumptions are made about
  * the input key.
  */
-unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
+_HIDDEN unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 {
 	const char * data = key;
 	unsigned int hash = len + initval, tmp;
@@ -42,6 +43,7 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 	case 1: hash += *data;
 		hash ^= hash << 10;
 		hash += hash >> 1;
+		break;
 	}
 
 	/* Force "avalanching" of final 127 bits */
@@ -56,7 +58,7 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 
 /* Special versions for hashing exactly 3 words.
  */
-unsigned int sfhash_3words(unsigned int a, unsigned int b, unsigned int c, unsigned int initval)
+_HIDDEN unsigned int sfhash_3words(unsigned int a, unsigned int b, unsigned int c, unsigned int initval)
 {
 	unsigned int aux[3] = {a,b,c};
 

@@ -34,7 +34,7 @@
 
 // Uniqueness test for IP fragments, using their tuples
 // @contrib: Eosis - https://github.com/Eosis
-inline int ip_tuple4_equals_to(ntoh_ipv4_tuple4_t* x, ntoh_ipv4_tuple4_t* y)
+_HIDDEN inline int ip_tuple4_equals_to(ntoh_ipv4_tuple4_t* x, ntoh_ipv4_tuple4_t* y)
 {
     if (x->source != y->source)
       return 0;

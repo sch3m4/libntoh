@@ -40,7 +40,7 @@
 
 static const char retval_descriptions[][48] =
 {
-		/* ntoh_add_ipv4fragment */
+		/* ntoh_add_ipv(4|6)fragment */
 		"Success" ,
 		"Incorrect IP flow" ,
 		"Incorrect IP header" ,
@@ -48,11 +48,12 @@ static const char retval_descriptions[][48] =
 		"Incorrect length" ,
 		"Not an IPv4 datagram" ,
 		"IP addresses mismatch" ,
-		"Not an IP fragment" ,
+		"Not an IPv4 fragment" ,
 		"Too small IP fragment",
 		"Fragment overrun" ,
 		"Max. IP fragments reached" ,
-		"No enough data",
+		"Not enough data",
+		"Not an IPv6 fragment",
 
 		/* ntoh_add_tcpsegment return values description */
 		"Incorrect session" ,

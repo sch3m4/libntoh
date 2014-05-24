@@ -38,33 +38,49 @@
 
 static struct
 {
-		unsigned short		init;
-		pntoh_ipv4_session_t sessions_list;
-		ntoh_lock_t			lock;
+		unsigned short	        init;
+		pntoh_ipv6_session_t    sessions_list;
+		ntoh_lock_t			    lock;
 }params = { 0 , 0 };
 
-#define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
+#define NTOH_GET_IPV6_FRAGMENT_OFFSET(offset)	(ntohs(offset)&~0x01)
+#define NTOH_GET_IPV6_MORE_FRAGMENTS(offset)    ntohs(offset&IP6F_MORE_FRAG)
 #define IS_SET(a,b)								(a & b)
 
-inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
+inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
-	ntoh_ipv4_key_t ret = 0;
-	unsigned int hold = 0;
+    unsigned char   tmp[50] = {0};
+	ntoh_ipv6_key_t ret = 0;
+	uint32_t         i;
+
 	if ( !tuple4 || !session )
 		return ret;
 
-	// @contrib: Eosis - https://github.com/Eosis
-	ret = tuple4->source ^ tuple4->destination;
-	ret ^= tuple4->id;
-	hold = tuple4->protocol;
-	hold = hold << 16; //skip the id bits
-	ret ^= hold;
+    for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
+    {
+        tmp[i] = tuple4->source[i];
+        tmp[sizeof(tuple4->source) + i ] = tuple4->destination[i];
+    }
+    tmp[i] = tuple4->protocol;
+    tmp[i+1] &= tuple4->id;
 
-	return ret;
+    // jenkins one-at-time hash algorithm
+    for(ret = i = 0; i < sizeof(tmp) ; ++i)
+    {
+        ret += tmp[i];
+        ret += (ret << 10);
+        ret ^= (ret >> 6);
+    }
+
+    ret += (ret << 3);
+    ret ^= (ret >> 11);
+    ret += (ret << 15);
+
+    return ret;
 }
 
 /** @brief API to get the size of the flows table (max allowed flows) **/
-unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session )
+unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 {
 	unsigned int ret = 0;
 
@@ -79,23 +95,31 @@ unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session )
 }
 
 /** @brief API to get a tuple4 **/
-unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple )
+unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tuple )
 {
+    struct ip6_frag *frag;
+
 	if ( !ip || !tuple )
 		return NTOH_ERROR_PARAMS;
 
-	tuple->destination = ip->ip_dst.s_addr;
-	tuple->source = ip->ip_src.s_addr;
-	tuple->id = ip->ip_id;
-	tuple->protocol = ip->ip_p;
+    /** @todo: only checks the first header, should we verify them all? **/
+    if ( ip->ip6_nxt != IPPROTO_FRAGMENT )
+        return NTOH_NOT_AN_IP_FRAGMENT;
+
+    memcpy ( (void*)tuple->source , (void*)&(ip->ip6_src) , sizeof ( tuple->source) );
+    memcpy ( (void*)tuple->destination , (void*)&(ip->ip6_dst) , sizeof ( tuple->destination) );
+
+    frag = (struct ip6_frag*)((unsigned char*)ip + sizeof ( struct ip6_hdr));
+    tuple->id = frag->ip6f_ident;  // we doesnt care byte order (no ntoX needed)
+    tuple->protocol = frag->ip6f_nxt;
 
 	return NTOH_OK;
 }
 
-pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
+pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
-	ntoh_ipv4_key_t key = 0;
-	pntoh_ipv4_flow_t ret = 0;
+	ntoh_ipv6_key_t key = 0;
+	pntoh_ipv6_flow_t ret = 0;
 
 	if ( !params.init || !session || !tuple4 )
 		return ret;
@@ -110,11 +134,11 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
 	return ret;
 }
 
-pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 , pipv4_dfcallback_t function , void *udata , unsigned int *error)
+pntoh_ipv6_flow_t ntoh_ipv6_new_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 , pipv6_dfcallback_t function , void *udata , unsigned int *error)
 {
-	pntoh_ipv4_flow_t ret = 0;
+	pntoh_ipv6_flow_t ret = 0;
 
-    if ( error != 0 )
+	if ( error != 0 )
         *error = 0;
 
 	if ( !params.init )
@@ -139,10 +163,10 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 		return ret;
 	}
 
-	if ( !( ret = (pntoh_ipv4_flow_t) calloc( 1, sizeof(ntoh_ipv4_flow_t) ) ) )
+	if ( !( ret = (pntoh_ipv6_flow_t) calloc( 1, sizeof(ntoh_ipv6_flow_t) ) ) )
 		return ret;
 
-	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv4_tuple4_t) );
+	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv6_tuple4_t) );
 	ret->key = ip_get_hashkey( session , tuple4 );
 
 	gettimeofday( &ret->last_activ, 0 );
@@ -163,9 +187,9 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 }
 
 /* insert a new fragment */
-inline static pntoh_ipv4_fragment_t insert_fragment ( pntoh_ipv4_fragment_t list , pntoh_ipv4_fragment_t frag )
+inline static pntoh_ipv6_fragment_t insert_fragment ( pntoh_ipv6_fragment_t list , pntoh_ipv6_fragment_t frag )
 {
-	pntoh_ipv4_fragment_t aux = list;
+	pntoh_ipv6_fragment_t aux = list;
 
 	if ( !aux )
 		return frag;
@@ -190,32 +214,18 @@ inline static pntoh_ipv4_fragment_t insert_fragment ( pntoh_ipv4_fragment_t list
 	return list;
 }
 
-inline static unsigned short cksum(unsigned short *buf, int nwords)
+/* build the complete datagram from all collected IPv6 fragments */
+inline static unsigned char *build_datagram ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow )
 {
-	unsigned long sum;
-
-	for(sum=0; nwords>0; nwords--)
-		sum += *buf++;
-
-	sum = (sum >> 16) + (sum &0xffff);
-	sum += (sum >> 16);
-
-	return (unsigned short)(~sum);
-}
-
-
-/* build the complete datagram from all collected IPv4 fragments */
-inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow )
-{
-	pntoh_ipv4_fragment_t 	tmp;
-	pntoh_ipv4_fragment_t 	fragment;
-	struct ip				*iphdr;
+	pntoh_ipv6_fragment_t 	tmp;
+	pntoh_ipv6_fragment_t 	fragment;
+	struct ip6_hdr			*iphdr;
 	unsigned int			offsethdr;
 	unsigned char 			*ret;
 
 	fragment = flow->fragments;
 	iphdr = flow->final_iphdr;
-	offsethdr = iphdr == 0 ? 0 : 4*iphdr->ip_hl;
+	offsethdr = iphdr == 0 ? 0 : sizeof ( struct ip6_hdr );
 	ret = (unsigned char*) calloc ( flow->total + offsethdr , sizeof ( unsigned char ) );
 
 	while ( fragment != 0 )
@@ -233,12 +243,10 @@ inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pnt
 	if ( offsethdr > 0 )
 	{
 		memcpy ( ret , iphdr , offsethdr );
-		iphdr = (struct ip*)ret;
-		iphdr->ip_len = htons(flow->total);
-		iphdr->ip_sum = 0;
-		iphdr->ip_sum = cksum ( (unsigned short*) iphdr , (int)offsethdr );
+		iphdr = (struct ip6_hdr*)ret;
+		iphdr->ip6_plen = htons(flow->total);
+		iphdr->ip6_nxt = flow->ident.protocol;
 		free ( flow->final_iphdr );
-
 		flow->meat += offsethdr;
 		flow->total += offsethdr;
 	}
@@ -246,10 +254,10 @@ inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pnt
 	return ret;
 }
 
-inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason )
+inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flow , unsigned short reason )
 {
 	unsigned char *buffer = 0;
-	pntoh_ipv4_flow_t item = 0;
+	pntoh_ipv6_flow_t item = 0;
 
 	if ( !flow || !(*flow) )
 		return;
@@ -259,7 +267,7 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	buffer = build_datagram ( session , item );
 
 	/* notify to the user */
-	( (pipv4_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
+	( (pipv6_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
 	htable_remove ( session->flows , item->key, &(item->ident) );
@@ -275,7 +283,7 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	return;
 }
 
-void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason )
+void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flow , unsigned short reason )
 {
 	if ( !params.init || !flow || !(*flow) )
 		return;
@@ -283,22 +291,22 @@ void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flo
 	lock_access( &session->lock );
 
 	lock_access ( &(*flow)->lock );
-	__ipv4_free_flow ( session , flow , reason );
+	__ipv6_free_flow ( session , flow , reason );
 
 	unlock_access( &session->lock );
 
 	return;
 }
 
-int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , struct ip *iphdr , size_t len )
+int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr , size_t len )
 {
-	size_t iphdr_len = 0;
-	unsigned short offset = 0;
-	unsigned short flags = 0;
-	unsigned int data_len = 0;
-	unsigned char *data = 0;
-	int				ret = NTOH_OK;
-	pntoh_ipv4_fragment_t frag = 0;
+	size_t                  iphdr_len = 0;
+	unsigned short          offset = 0;
+	unsigned int            data_len = 0;
+	unsigned char           *data = 0;
+	int				        ret = NTOH_OK;
+	pntoh_ipv6_fragment_t   frag = 0;
+	struct ip6_frag         *frhdr;
 
 	if ( !params.init )
 		return NTOH_NOT_INITIALIZED;
@@ -313,58 +321,63 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 		return NTOH_INCORRECT_IP_HEADER;
 
 	/* too short length */
-	if ( len <= sizeof(struct ip) )
+	if ( len <= sizeof(struct ip6_hdr) + sizeof ( struct ip6_frag ) )
 		return NTOH_INCORRECT_LENGTH;
 
 	/* get IP header and data length */
-	if ( ( iphdr_len = 4 * ( iphdr->ip_hl ) ) < sizeof(struct ip) )
-		return NTOH_INCORRECT_IP_HEADER_LENGTH;
+	/*if ( ( iphdr_len = 4 * ( iphdr->ip_hl ) ) < sizeof(struct ip) )
+		return NTOH_INCORRECT_IP_HEADER_LENGTH;*/
+    iphdr_len = sizeof ( struct ip6_hdr );
 
-	if ( len < ntohs( iphdr->ip_len ) )
+	if ( len < ntohs( iphdr->ip6_plen ) )
 		return NTOH_NOT_ENOUGH_DATA;
 
-	data_len = ntohs( iphdr->ip_len ) - iphdr_len;
-	data = (unsigned char*) iphdr + iphdr_len;
+	data_len = ntohs( iphdr->ip6_plen ) - sizeof ( struct ip6_frag );
+	data = (unsigned char*) iphdr + iphdr_len + sizeof ( struct ip6_frag );
 
-	/* check if it is an IPv4 packet */
-	if ( iphdr->ip_v != 4 )
-		return NTOH_NOT_IPV4;
+	/* check if it is an IPv6 packet */
+	if ( ((iphdr->ip6_vfc >> 4) & 0x0F) != 6 )
+		return NTOH_NOT_IPV6;
 
 	lock_access ( &flow->lock );
 
 	/* check if addresses matches */
-	if ( flow->ident.source != iphdr->ip_src.s_addr || flow->ident.destination != iphdr->ip_dst.s_addr )
+	if ( memcmp ( flow->ident.source , (const void*)&(iphdr->ip6_src) , sizeof ( flow->ident.source )) != 0 || memcmp ( flow->ident.destination , (const void*)&(iphdr->ip6_dst) , sizeof ( flow->ident.destination )) != 0 )
 	{
-		ret = NTOH_IP_ADDRESSES_MISMATCH;
+	    ret = NTOH_IP_ADDRESSES_MISMATCH;
 		goto exitp;
 	}
 
-	flags = ntohs( iphdr->ip_off );
-	offset = NTOH_GET_IPV4_FRAGMENT_OFFSET(iphdr->ip_off);
+    /** @todo: only checks the first header, should we verify them all? **/
+    if ( iphdr->ip6_nxt != IPPROTO_FRAGMENT )
+        return NTOH_NOT_AN_IP_FRAGMENT;
+
+    frhdr = (struct ip6_frag*)((unsigned char*)iphdr + sizeof ( struct ip6_hdr));
+	offset = NTOH_GET_IPV6_FRAGMENT_OFFSET(frhdr->ip6f_offlg);
 
 	/* check if it is a fragment */
-	if ( !( IS_SET(flags,IP_MF) || offset > 0 ) || IS_SET(flags,IP_DF) )
+	if ( !( NTOH_GET_IPV6_MORE_FRAGMENTS(frhdr->ip6f_offlg) || offset > 0 ) )
 	{
 		ret = NTOH_NOT_AN_IP_FRAGMENT;
 		goto exitp;
 	}
 
 	/* checks if the fragment is hand crafted */
-	if ( IS_SET(flags,IP_MF) && data_len < MIN_IPV4_FRAGMENT_LENGTH )
+	if ( NTOH_GET_IPV6_MORE_FRAGMENTS(frhdr->ip6f_offlg) && data_len < MIN_IPV6_FRAGMENT_LENGTH )
 	{
 		ret = NTOH_TOO_LOW_IP_FRAGMENT_LENGTH;
 		goto exitp;
 	}
 
-	/* (1/2) checks if data length will overload max. amount of data allowed for an IPv4 datagram */
-	if ( flow->meat + data_len > MAX_IPV4_DATAGRAM_LENGTH )
+	/* (1 / 2) checks if data length will overload max. amount of data allowed for an IPv6 datagram */
+	if ( flow->meat + data_len > MAX_IPV6_DATAGRAM_LENGTH )
 	{
 		ret = NTOH_IP_FRAGMENT_OVERRUN;
 		goto exitp;
 	}
 
-	/* (2/2) checks if data length will overload max. amount of data allowed for an IPv4 datagram */
-	if ( offset + data_len > MAX_IPV4_DATAGRAM_LENGTH )
+	/* (2 / 2) checks if data length will overload max. amount of data allowed for an IPv6 datagram */
+	if ( offset + data_len > MAX_IPV6_DATAGRAM_LENGTH )
 	{
 		ret = NTOH_IP_FRAGMENT_OVERRUN;
 		goto exitp;
@@ -373,31 +386,30 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	sem_wait ( &session->max_fragments );
 
 	/* inserts the new fragment into the list */
-	frag = (pntoh_ipv4_fragment_t) calloc ( 1 , sizeof ( ntoh_ipv4_fragment_t ) );
+	frag = (pntoh_ipv6_fragment_t) calloc ( 1 , sizeof ( ntoh_ipv6_fragment_t ) );
 	frag->len = data_len;
 	frag->offset = offset;
 	frag->data = (unsigned char*) calloc ( data_len , sizeof ( unsigned char ) );
 	memcpy ( frag->data , data , data_len );
 	flow->fragments = insert_fragment ( flow->fragments , frag );
 
-    if ( flow->total < offset + data_len )
+	if ( flow->total < offset + data_len )
 		flow->total = offset + data_len;
 
 	flow->meat += data_len;
 
-	/* it is the final fragment */
-	if ( !IS_SET(flags,IP_MF) )
+	/* it is the final fragment? */
+	if ( ! NTOH_GET_IPV6_MORE_FRAGMENTS(frhdr->ip6f_offlg) )
 	{
-		flow->final_iphdr = (struct ip*) calloc ( iphdr_len , sizeof ( unsigned char ) );
+		flow->final_iphdr = (struct ip6_hdr*) calloc ( iphdr_len , sizeof ( unsigned char ) );
 		memcpy ( flow->final_iphdr , iphdr , iphdr_len );
 	}
 
 	/* if there are no holes */
 	if ( flow->final_iphdr != 0 && flow->total == flow->meat )
 	{
-
 		lock_access ( &session->lock );
-		__ipv4_free_flow ( session , &flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
+		__ipv6_free_flow ( session , &flow , NTOH_REASON_DEFRAGMENTED_DATAGRAM );
 		unlock_access ( &session->lock );
 	}else
 		gettimeofday( &flow->last_activ, 0 );
@@ -409,7 +421,7 @@ exitp:
 	return ret;
 }
 
-unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session )
+unsigned int ntoh_ipv6_count_flows ( pntoh_ipv6_session_t session )
 {
 	unsigned int ret = 0;
 
@@ -425,10 +437,10 @@ unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session )
 	return ret;
 }
 
-inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
+inline static void ip_check_timeouts ( pntoh_ipv6_session_t session )
 {
 	struct timeval		tv = { 0 , 0 };
-	pntoh_ipv4_flow_t	item;
+	pntoh_ipv6_flow_t	item;
 	unsigned int		i = 0;
 	phtnode_t			node = 0;
 	phtnode_t			prev = 0;
@@ -442,13 +454,13 @@ inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 		node = prev = session->flows->table[i];
 		while ( node != 0 )
 		{
-			item = (pntoh_ipv4_flow_t) node->val;
+			item = (pntoh_ipv6_flow_t) node->val;
 
 			/* timeout expired */
-			if ( DEFAULT_IPV4_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
+			if ( DEFAULT_IPV6_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
 			{
 				lock_access ( &item->lock );
-				__ipv4_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
+				__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
 				if (node != prev)
 				{
 				      node = prev;
@@ -473,7 +485,7 @@ static void *timeouts_thread ( void *p )
 
 	while ( 1 )
 	{
-		ip_check_timeouts( (pntoh_ipv4_session_t) p );
+		ip_check_timeouts( (pntoh_ipv6_session_t) p );
 		pthread_testcancel();
 		sleep( 1 );
 	}
@@ -483,15 +495,15 @@ static void *timeouts_thread ( void *p )
 	return 0;
 }
 
-pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error )
+pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error )
 {
-	pntoh_ipv4_session_t session;
+	pntoh_ipv6_session_t session;
 	unsigned int max_fragments;
 
 	if ( !max_flows )
-		max_flows = DEFAULT_IPV4_MAX_FLOWS;
+		max_flows = DEFAULT_IPV6_MAX_FLOWS;
 
-	if ( ! (session = (pntoh_ipv4_session_t) calloc ( 1 , sizeof ( ntoh_ipv4_session_t ) )) )
+	if ( ! (session = (pntoh_ipv6_session_t) calloc ( 1 , sizeof ( ntoh_ipv6_session_t ) )) )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_NOMEM;
@@ -504,13 +516,13 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 	pthread_mutex_init ( &session->lock.mutex , 0 );
 	pthread_cond_init ( &session->lock.pcond , 0 );
 
-	max_fragments = (int)(max_mem / sizeof ( ntoh_ipv4_fragment_t ));
+	max_fragments = (int)(max_mem / sizeof ( ntoh_ipv6_fragment_t ));
 	if ( !max_fragments )
-		max_fragments = DEFAULT_IPV4_MAX_FRAGMENTS;
+		max_fragments = DEFAULT_IPV6_MAX_FRAGMENTS;
 
 	sem_init ( &session->max_fragments , 0 , max_fragments );
 
-	ntoh_ipv4_init();
+	ntoh_ipv6_init();
 
 	lock_access ( &params.lock );
 
@@ -528,11 +540,11 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 	return session;
 }
 
-inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
+inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 {
-	ntoh_ipv4_key_t	first = 0;
-	pntoh_ipv4_session_t ptr = 0;
-	pntoh_ipv4_flow_t item = 0;
+	ntoh_ipv6_key_t	first = 0;
+	pntoh_ipv6_session_t ptr = 0;
+	pntoh_ipv6_flow_t item = 0;
 
 	if ( !session )
 		return;
@@ -553,7 +565,7 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 	while ( ( first = htable_first ( session->flows ) ) != 0 )
 	{
 		lock_access ( &item->lock );
-		__ipv4_free_flow ( session , &item , NTOH_REASON_EXIT );
+		__ipv6_free_flow ( session , &item , NTOH_REASON_EXIT );
 	}
 
 	htable_destroy ( &(session->flows) );
@@ -570,21 +582,21 @@ inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
     return;
 }
 
-void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session )
+void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
 {
 	if ( !params.init || !session )
 		return;
 
 	lock_access ( &params.lock );
 
-	__ipv4_free_session ( session );
+	__ipv6_free_session ( session );
 
 	unlock_access ( &params.lock );
 
     return;
 }
 
-void ntoh_ipv4_init ( void )
+void ntoh_ipv6_init ( void )
 {
 	if ( params.init )
 		return;
@@ -597,7 +609,7 @@ void ntoh_ipv4_init ( void )
 	return;
 }
 
-void ntoh_ipv4_exit ( void )
+void ntoh_ipv6_exit ( void )
 {
 	if ( !params.init )
 		return;
@@ -605,7 +617,7 @@ void ntoh_ipv4_exit ( void )
 	lock_access ( &params.lock );
 
 	while ( params.sessions_list != 0 )
-		__ipv4_free_session ( params.sessions_list );
+		__ipv6_free_session ( params.sessions_list );
 
 	unlock_access ( &params.lock );
 

@@ -32,6 +32,7 @@
  ********************************************************************************/
 
 #define __FAVOR_BSD
+#include <netinet/tcp.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -318,7 +319,8 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
  * @param function User defined function to receive the segments of this stream
  * @param udata User-defined data to be linked to the new stream
  * @param error Returned error code
- * @param enable_tcp_established_timeout check idle time for established connections // @contrib: di3online - https://github.com/di3online
+ * @param enable_tcp_established_timeout enables/disables idle time verification for established connections // @contrib: di3online - https://github.com/di3online
+ * @param enable_check_nowindow enables/disables TCP Window verification // @contrib: di3online - https://github.com/di3online
  * @return A pointer to the new stream on success or 0 when fails
  */
 pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 , pntoh_tcp_callback_t function , void *udata , unsigned int *error, unsigned short enable_check_timeout, unsigned short enable_check_nowindow );

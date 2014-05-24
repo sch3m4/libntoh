@@ -45,7 +45,7 @@ extern "C"
 /* IP defragmentation return values */
 #define NTOH_IP_INCORRECT_FLOW				-1
 #define NTOH_INCORRECT_LENGTH				-2
-#define NTOH_INCORRECT_IPHEADER				-3
+#define NTOH_INCORRECT_IP_HEADER			-3
 #define NTOH_INCORRECT_IP_HEADER_LENGTH		-4
 #define NTOH_NOT_IPV4						-5
 #define NTOH_IP_ADDRESSES_MISMATCH			-6
@@ -53,23 +53,24 @@ extern "C"
 #define NTOH_TOO_LOW_IP_FRAGMENT_LENGTH		-8
 #define NTOH_IP_FRAGMENT_OVERRUN			-9
 #define NTOH_MAX_IP_FRAGMENTS_REACHED		-10
-#define NTOH_NO_ENOUGH_DATA					-11
+#define NTOH_NOT_ENOUGH_DATA				-11
+#define NTOH_NOT_IPV6                       -12
 
 /* TCP streams reassembly return values */
-#define NTOH_INCORRECT_SESSION          	-12
-#define NTOH_INCORRECT_TCP_HEADER_LENGTH	-13
-#define NTOH_TCP_PORTS_MISMATCH				-14
-#define NTOH_INVALID_FLAGS              	-15
-#define NTOH_TOO_LOW_SEQ_NUMBER         	-16
-#define NTOH_TOO_LOW_ACK_NUMBER         	-17
-#define NTOH_PAWS_FAILED					-18
-#define NTOH_HANDSHAKE_FAILED           	-19
-#define NTOH_MAX_SYN_RETRIES_REACHED		-20
-#define NTOH_MAX_SYNACK_RETRIES_REACHED		-21
-#define NTOH_NO_WINDOW_SPACE_LEFT       	-22
-#define NTOH_NOT_TCP						-23
-#define NTOH_SYNCHRONIZING					-24
-#define NTOH_NOT_INITIALIZED				-25
+#define NTOH_INCORRECT_SESSION          	-13
+#define NTOH_INCORRECT_TCP_HEADER_LENGTH	-14
+#define NTOH_TCP_PORTS_MISMATCH				-15
+#define NTOH_INVALID_FLAGS              	-16
+#define NTOH_TOO_LOW_SEQ_NUMBER         	-17
+#define NTOH_TOO_LOW_ACK_NUMBER         	-18
+#define NTOH_PAWS_FAILED					-19
+#define NTOH_HANDSHAKE_FAILED           	-20
+#define NTOH_MAX_SYN_RETRIES_REACHED		-21
+#define NTOH_MAX_SYNACK_RETRIES_REACHED		-22
+#define NTOH_NO_WINDOW_SPACE_LEFT       	-23
+#define NTOH_NOT_TCP						-24
+#define NTOH_SYNCHRONIZING					-25
+#define NTOH_NOT_INITIALIZED				-26
 
 /* TCP streams reassembly notification cases values */
 #define NTOH_REASON_HSFAILED					1
@@ -86,8 +87,8 @@ extern "C"
 #define NTOH_REASON_NOWINDOW					12
 
 /* IP defragmentation notification cases values */
-#define NTOH_REASON_DEFRAGMENTED_DATAGRAM	12
-#define NTOH_REASON_TIMEDOUT_FRAGMENTS		13
+#define NTOH_REASON_DEFRAGMENTED_DATAGRAM	13
+#define NTOH_REASON_TIMEDOUT_FRAGMENTS		14
 
 /* API errors */
 #define NTOH_ERROR_NOMEM			1
@@ -108,6 +109,7 @@ typedef struct
 /** @brief Header files */
 #include "common.h"
 #include "ipv4defrag.h"
+#include "ipv6defrag.h"
 #include "tcpreassembly.h"
 
 /**

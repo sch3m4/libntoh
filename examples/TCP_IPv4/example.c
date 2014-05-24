@@ -29,7 +29,7 @@
  ********************************************************************************/
 
 /*
- * NOTE: THIS CODE HAS NOT BEEN UPDATED SINCE LIBNTOH VERSION 0.4a
+ * This example save the data sent by each peer in a separated file called: [src_ip]:[src_port]-[dst_ip]:[dst_port]
  */
 
 #include <stdio.h>
@@ -212,7 +212,7 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 
 	/* find the stream or creates a new one */
 	if ( !( stream = ntoh_tcp_find_stream( tcp_session , &tcpt5 ) ) )
-		if ( ! ( stream = ntoh_tcp_new_stream( tcp_session , &tcpt5, callback , 0 , &error) ) )
+		if ( ! ( stream = ntoh_tcp_new_stream( tcp_session , &tcpt5, callback , 0 , &error , 1 , 1 ) ) )
 		{
 			fprintf ( stderr , "\n[e] Error %d creating new stream: %s" , error , ntoh_get_errdesc ( error ) );
 			return;
@@ -287,6 +287,9 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %lu) ---> " , ntoh_tcp_get_status ( stream->status ) , inet_ntoa( *(struct in_addr*) &orig->addr ) , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
 	fprintf ( stderr , "%s:%d (%s | Window: %lu)\n\t" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
 
+	if ( seg != 0 )
+		fprintf ( stderr , "SEQ: %lu ACK: %lu Next SEQ: %lu" , seg->seq , seg->ack , orig->next_seq );
+
 	switch ( reason )
 	{
         switch ( extra )
@@ -309,7 +312,7 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 
 		/* Data segment */
 		case NTOH_REASON_DATA:
-			fprintf ( stderr , "+ Data segment | Bytes: %i SEQ: %lu ACK: %lu Next SEQ: %lu\n\t\t" , seg->payload_len , seg->seq , seg->ack , orig->next_seq );
+			fprintf ( stderr , " | Data segment | Bytes: %i" , seg->payload_len );
 
 			/* write data */
 			write_data( (ppeer_info_t) seg->user_data );
@@ -322,6 +325,8 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 
 	if ( seg != 0 )
 		free_peer_info ( (ppeer_info_t) seg->user_data );
+
+	fprintf ( stderr , "\n" );
 
 	return;
 }
@@ -488,7 +493,7 @@ int main ( int argc , char *argv[] )
 
 	ntoh_init ();
 
-	if ( ! (tcp_session = ntoh_tcp_new_session ( 0 , 0 , &error )) )
+	if ( ! (tcp_session = ntoh_tcp_new_session ( 0 , 0 , &error ) ) )
 	{
 		fprintf ( stderr , "\n[e] Error %d creating TCP session: %s" , error , ntoh_get_errdesc ( error ) );
 		exit ( -5 );

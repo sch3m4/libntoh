@@ -12,7 +12,7 @@ SET ( CMAKE_INCLUDE_PATH "/usr/include" )
 # set build type
 SET ( CMAKE_BUILD_TYPE Release )
 # set sources
-SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c common.c sfhash.c )
+SET ( LIBNTOH_SRCS libntoh.c tcpreassembly.c ipv4defrag.c ipv6defrag.c common.c sfhash.c )
 # set cflags
 SET ( CMAKE_C_FLAGS "-Wall -Os -O3 -pipe -fPIC" )
 SET ( CMAKE_SWIG_FLAGS "")
@@ -59,7 +59,7 @@ TARGET_LINK_LIBRARIES( ${OUTPUT_LIB} ${CMAKE_THREAD_LIBS_INIT})
 INSTALL ( TARGETS ${OUTPUT_LIB} LIBRARY DESTINATION lib )
 #INSTALL ( TARGETS ${OUTPUT_LIB} ARCHIVE DESTINATION lib )// static: comment the line above and uncomment this one to compile as static library (contrib by Di3)
 # headers
-INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTOH_INC}/sfhash.h ${LIBNTOH_INC}/ipv4defrag.h ${LIBNTOH_INC}/common.h DESTINATION include/libntoh )
+INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTOH_INC}/sfhash.h ${LIBNTOH_INC}/ipv4defrag.h ${LIBNTOH_INC}/ipv6defrag.h ${LIBNTOH_INC}/common.h DESTINATION include/libntoh )
 # pkconfig file
 INSTALL ( FILES ${CMAKE_CURRENT_BINARY_DIR}/ntoh.pc DESTINATION lib/pkgconfig)
 # swig

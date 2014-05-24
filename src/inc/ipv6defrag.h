@@ -1,5 +1,5 @@
-#ifndef __LIBNTOH_IP4DF__
-# define __LIBNTOH_IP4DF__
+#ifndef __LIBNTOH_IP6DF__
+# define __LIBNTOH_IP6DF__
 
 /********************************************************************************
  * Copyright (c) 2012, Chema Garcia                                             *
@@ -33,54 +33,57 @@
 
 #include <sys/time.h>
 #include <netinet/in.h>
-#include <netinet/ip.h>
+#include <netinet/ip6.h>
 
-/// macro to verify if an IP datagram is part of a fragmented datagram
-#define NTOH_IPV4_IS_FRAGMENT(off)	( ( (8*(ntohs(off) & 0x1FFF)) > 0 || (ntohs(off) & 0x2000) ) && !(ntohs(off) & 0x4000) )
+#define NTOH_IPV6_IS_FRAGMENT(val)  (((struct ip6_hdr*)val)->ip6_nxt==IPPROTO_FRAGMENT && \
+                                     ( \
+                                      (ntohs(((struct ip6_frag *)((unsigned char*)val+sizeof(struct ip6_hdr)))->ip6f_offlg) & IP6F_OFF_MASK)>0 || \
+                                      (ntohs(((struct ip6_frag *)((unsigned char*)val+sizeof(struct ip6_hdr)))->ip6f_offlg & IP6F_MORE_FRAG)>0) \
+                                      ))
 
 /** @brief Struct to generate the flow key **/
 typedef struct
 {
 	/// source IP address
-	unsigned int source;
+	uint8_t source[16];
 	/// destination IP address
-	unsigned int destination;
+	uint8_t destination[16];
 	/// Transport layer protocol
 	uint8_t protocol;
 	/// Identification
-	unsigned short id;
-} ntoh_ipv4_tuple4_t, *pntoh_ipv4_tuple4_t;
+	unsigned int id;
+} ntoh_ipv6_tuple4_t, *pntoh_ipv6_tuple4_t;
 
-typedef unsigned int ntoh_ipv4_key_t;
+typedef unsigned int ntoh_ipv6_key_t;
 
 /** @brief Struct to store the information of each fragment */
-typedef struct _ipv4_fragment_
+typedef struct _ipv6_fragment_
 {
 	/// pointer to the next fragment
-	struct _ipv4_fragment_ *next;
+	struct _ipv6_fragment_ *next;
 	/// fragment offset
 	unsigned int 			offset;
 	/// fragment data length
 	unsigned int 			len;
 	/// fragment data
 	unsigned char 			*data;
-} ntoh_ipv4_fragment_t , *pntoh_ipv4_fragment_t;
+} ntoh_ipv6_fragment_t , *pntoh_ipv6_fragment_t;
 
-/** @brief Struct to store the information of each IPv4 flow */
+/** @brief Struct to store the information of each IPv6 flow */
 typedef struct
 {
 	/// flow identification data
-	ntoh_ipv4_tuple4_t 		ident;
+	ntoh_ipv6_tuple4_t 		ident;
 	/// flow key
-	ntoh_ipv4_key_t 		key;
+	ntoh_ipv6_key_t 		key;
 	/// fragments list
-	pntoh_ipv4_fragment_t 	fragments;
+	pntoh_ipv6_fragment_t 	fragments;
 	/// total amount of received data
 	size_t 					meat;
 	/// total amount of expected data
 	size_t 					total;
 	/// final fragment received?
-	struct ip 				*final_iphdr;
+	struct ip6_hdr			*final_iphdr;
 	/// user defined function to receive defragmented packets
 	void 					*function;
 	/// last activity
@@ -88,68 +91,68 @@ typedef struct
 	/// user-defined data
 	void 					*udata;
 	ntoh_lock_t 			lock;
-} ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;
+} ntoh_ipv6_flow_t, *pntoh_ipv6_flow_t;
 
-typedef htable_t ipv4_flows_table_t;
-typedef phtable_t pipv4_flows_table_t;
+typedef htable_t ipv6_flows_table_t;
+typedef phtable_t pipv6_flows_table_t;
 
 /** @brief Structure to store global parameters */
-typedef struct _ipv4_session_
+typedef struct _ipv6_session_
 {
-	struct _ipv4_session_ 	*next;
+	struct _ipv6_session_ 	*next;
 
 	/// max. number of IP flows
 	sem_t 					max_flows;
 	sem_t 					max_fragments;
 	/// hash table to store IP flows
-	pipv4_flows_table_t 	flows;
+	pipv6_flows_table_t 	flows;
 	/// connection tables related
 	pthread_t 				tID;
 	ntoh_lock_t 			lock;
-}ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
+}ntoh_ipv6_session_t , *pntoh_ipv6_session_t;
 
 /// min. PMTU
-#ifndef MIN_IPV4_FRAGMENT_LENGTH
-# define MIN_IPV4_FRAGMENT_LENGTH	576
+#ifndef MIN_IPV6_FRAGMENT_LENGTH
+# define MIN_IPV6_FRAGMENT_LENGTH	1280
 #endif
 
-/// max. IPv4 datagram fragment length
-#ifndef MAX_IPV4_DATAGRAM_LENGTH
-# define MAX_IPV4_DATAGRAM_LENGTH		65535
+/// max. IPv6 datagram fragment length
+#ifndef MAX_IPV6_DATAGRAM_LENGTH
+# define MAX_IPV6_DATAGRAM_LENGTH		4294967295UL   // max size of jumbograms (using hop-by-hop options header)
 #endif
 
-/// IPv4 fragment timeout
-#ifndef DEFAULT_IPV4_FRAGMENT_TIMEOUT
-# define DEFAULT_IPV4_FRAGMENT_TIMEOUT	15
+/// IPv6 fragment timeout
+#ifndef DEFAULT_IPV6_FRAGMENT_TIMEOUT
+# define DEFAULT_IPV6_FRAGMENT_TIMEOUT	15
 #endif
 
-/// max. IPv4 allowed flows
-#ifndef DEFAULT_IPV4_MAX_FLOWS
-# define DEFAULT_IPV4_MAX_FLOWS		1024
+/// max. IPv6 allowed flows
+#ifndef DEFAULT_IPV6_MAX_FLOWS
+# define DEFAULT_IPV6_MAX_FLOWS		1024
 #endif
 
-/// max. IPv4 allowed fragments
-#ifndef DEFAULT_IPV4_MAX_FRAGMENTS
-# define DEFAULT_IPV4_MAX_FRAGMENTS	((12*1024*1024) / sizeof(ntoh_ipv4_fragment_t))
+/// max. IPv6 allowed fragments
+#ifndef DEFAULT_IPV6_MAX_FRAGMENTS
+# define DEFAULT_IPV6_MAX_FRAGMENTS	((12*1024*1024) / sizeof(ntoh_ipv6_fragment_t))
 #endif
 
-typedef void(*pipv4_dfcallback_t) ( pntoh_ipv4_flow_t , pntoh_ipv4_tuple4_t , unsigned char* , size_t , unsigned short );
+typedef void(*pipv6_dfcallback_t) ( pntoh_ipv6_flow_t , pntoh_ipv6_tuple4_t , unsigned char* , size_t , unsigned short );
 
 /**
- * @brief Initializes the IPv4 defragmentation
+ * @brief Initializes the IPv6 defragmentation
  */
-void ntoh_ipv4_init ( void );
+void ntoh_ipv6_init ( void );
 
 /**
- * @brief Flush all IPv4 sessions and release all resources
+ * @brief Flush all IPv6 sessions and release all resources
  */
-void ntoh_ipv4_exit ( void );
+void ntoh_ipv6_exit ( void );
 
 /**
- * @brief Releases all resources used by an IPv4 session
+ * @brief Releases all resources used by an IPv6 session
  * @param session Session to be released
  */
-void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session );
+void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session );
 
 /**
  * @brief Creates a new session with independent parameters to reassemble TCP segments
@@ -158,60 +161,60 @@ void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session );
  * @param error Returned error code
  * @return A pointer to the new session or 0 when it fails
  */
-pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error );
+pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error );
 
 /**
  * @brief Finds an IP flow
  * @param tuple4 Flow information
  * @return Pointer to the flow on success or 0 when fails
  */
-pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 );
+pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 );
 
 /**
- * @brief Adds a new IPv4 flow
+ * @brief Adds a new IPv6 flow
  * @param tuple4 Flow information
  * @param function User defined function to receive defragmented datagrams
  * @param count_max Max. fragments allowed
  * @param udata User defined data associated with this flow
  * @return A pointer to the new created flow
  */
-pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 , pipv4_dfcallback_t function , void *udata , unsigned int *error);
+pntoh_ipv6_flow_t ntoh_ipv6_new_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 , pipv6_dfcallback_t function , void *udata , unsigned int *error);
 
 /**
- * @brief Frees an IPv4 flow
- * @param flow IPv4 flow to be freed
+ * @brief Frees an IPv6 flow
+ * @param flow IPv6 flow to be freed
  * @param reason Why has been freed the flow?
  */
-void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason );
+void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flow , unsigned short reason );
 
 /**
- * @brief Adds a new IPv4 fragment to a given flow
+ * @brief Adds a new IPv6 fragment to a given flow
  * @param flow Flow where the new fragment will be added
- * @param iphdr IPv4 Header of the fragment
- * @param len Length of the fragment (IPv4 header + payload)
+ * @param iphdr IPv6 Header of the fragment
+ * @param len Length of the fragment (IPv6 header + payload)
  * @return NTOH_OK on success, or error code when it fails
  */
-int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , struct ip *iphdr , size_t len );
+int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr , size_t len );
 
 /**
  * @brief Returns the total count of flows stored in the global hash table
  * @return Total count of stored flows
  */
-unsigned int ntoh_ipv4_count_flows ( pntoh_ipv4_session_t session );
+unsigned int ntoh_ipv6_count_flows ( pntoh_ipv6_session_t session );
 
 /**
  * @brief Gets the size of the flows table (max allowed flows)
- * @param session IPv4 Session
- * @return The max. amount of IPv4 flows that can be stored , or zero on error
+ * @param session IPv6 Session
+ * @return The max. amount of IPv6 flows that can be stored , or zero on error
 **/
-unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session );
+unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session );
 
 /**
- * @brief Gets the tuple4 of a IPv4 flow
- * @param ip Pointer to the IPv4 header
+ * @brief Gets the tuple4 of a IPv6 flow
+ * @param ip Pointer to the IPv6 header
  * @param tuple Pointer to the output tuple4 struct
  * @return NTOH_OK on success or the corresponding error code
  */
-unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple );
+unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tuple );
 
-#endif /* __LIBNTOH_IP4DF__ */
+#endif /* __LIBNTOH_IP6DF__ */

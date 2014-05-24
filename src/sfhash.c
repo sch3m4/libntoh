@@ -62,5 +62,5 @@ _HIDDEN unsigned int sfhash_3words(unsigned int a, unsigned int b, unsigned int 
 {
 	unsigned int aux[3] = {a,b,c};
 
-	return sfhash(aux, 12, initval);
+	return sfhash(aux, sizeof ( aux ) , initval);
 }

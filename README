@@ -1,17 +1,3 @@
-Getting the source
-==================
-
-$ git clone git://github.com/sch3m4/libntoh.git
-Cloning into 'libntoh'...
-remote: Reusing existing pack: 732, done.
-remote: Counting objects: 33, done.
-remote: Compressing objects: 100% (33/33), done.
-remote: Total 765 (delta 12), reused 0 (delta 0)
-Receiving objects: 100% (765/765), 1009.13 KiB | 416 KiB/s, done.
-Resolving deltas: 100% (341/341), done.
-$
-
-
 Introduction
 ============
 
@@ -24,6 +10,22 @@ A: It's true there are some libraries which aims to do the same things (like lib
 Q: Which protocols does libntoh support?
 A: Currently libntoh performs IPv4 defragmentation and TCP reassembly
 
+Mailing List
+============
+There is a mailing list for libntoh development issues: libntoh-dev@safetybits.net
+
+Getting the source
+==================
+
+$ git clone git://github.com/sch3m4/libntoh.git
+Cloning into 'libntoh'...
+remote: Reusing existing pack: 732, done.
+remote: Counting objects: 33, done.
+remote: Compressing objects: 100% (33/33), done.
+remote: Total 765 (delta 12), reused 0 (delta 0)
+Receiving objects: 100% (765/765), 1009.13 KiB | 416 KiB/s, done.
+Resolving deltas: 100% (341/341), done.
+$
 
 Dependencies
 ============

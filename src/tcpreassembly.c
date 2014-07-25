@@ -680,7 +680,7 @@ inline static void get_tcp_options ( pntoh_tcp_peer_t peer , struct tcphdr *tcp 
                                 break;
 
                         case TCPOPT_WINDOW:
-                                memcpy( &aux, ( options + 2 ), TCPOLEN_WINDOW - 1 );
+                                memcpy( &aux, ( options + 2 ), TCPOLEN_WINDOW - 2 );
                                 peer->wscale = (unsigned int) aux;
                                 options += TCPOLEN_WINDOW;
                                 break;

@@ -7,7 +7,7 @@
  * of bytes.  No alignment or length assumptions are made about
  * the input key.
  */
-_HIDDEN unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
+unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 {
 	const char * data = key;
 	unsigned int hash = len + initval, tmp;

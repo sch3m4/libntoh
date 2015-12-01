@@ -188,10 +188,9 @@ void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flo
  * @brief Adds a new IPv4 fragment to a given flow
  * @param flow Flow where the new fragment will be added
  * @param iphdr IPv4 Header of the fragment
- * @param len Length of the fragment (IPv4 header + payload)
  * @return NTOH_OK on success, or error code when it fails
  */
-int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , struct ip *iphdr , size_t len );
+int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , struct ip *iphdr );
 
 /**
  * @brief Returns the total count of flows stored in the global hash table

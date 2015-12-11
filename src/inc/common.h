@@ -39,7 +39,7 @@
 typedef struct _hash_node_
 {
 	struct _hash_node_	*next;
-	void				*val;
+	void			*val;
 	unsigned int		key;
 } htnode_t , *phtnode_t;
 

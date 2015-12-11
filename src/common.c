@@ -36,19 +36,19 @@
 // @contrib: Eosis - https://github.com/Eosis
 _HIDDEN inline int ip_tuple4_equals_to(ntoh_ipv4_tuple4_t* x, ntoh_ipv4_tuple4_t* y)
 {
-    if (x->source != y->source)
-      return 0;
+	if (x->source != y->source)
+		return 0;
 
-    if (x->destination != y->destination)
-      return 0;
+	if (x->destination != y->destination)
+		return 0;
 
-    if (x->protocol != y->protocol)
-      return 0;
+	if (x->protocol != y->protocol)
+		return 0;
 
-    if (x->id != y->id)
-      return 0;
+	if (x->id != y->id)
+		return 0;
 
-    return 1;
+	return 1;
 }
 
 /****************/
@@ -72,9 +72,9 @@ _HIDDEN phtable_t htable_map ( size_t size )
 /* insert a pair key-value into the hash table */
 _HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val )
 {
-	phtnode_t node = 0;
-	phtnode_t aux = 0;
-	unsigned int index = 0;
+	phtnode_t	node = 0;
+	phtnode_t	aux = 0;
+	unsigned int	index = 0;
 
 	if ( !ht || !val )
 		return 0;
@@ -104,8 +104,8 @@ _HIDDEN int htable_insert ( phtable_t ht  , unsigned int key , void *val )
 /* returns the value associated to the given key */
 _HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 {
-	unsigned int index = 0;
-	phtnode_t node = 0;
+	unsigned int	index = 0;
+	phtnode_t	node = 0;
 
 	if ( !ht )
 		return 0;
@@ -131,10 +131,10 @@ _HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 /* removes a key-value pair from the hash table */
 _HIDDEN void *htable_remove ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 {
-	unsigned int index = 0;
-	phtnode_t node = 0;
-	phtnode_t aux = 0;
-	void *ret = 0;
+	unsigned int	index = 0;
+	phtnode_t	node = 0;
+	phtnode_t	aux = 0;
+	void		*ret = 0;
 
 	if ( !ht )
 		return 0;
@@ -177,9 +177,9 @@ _HIDDEN void *htable_remove ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 /* count the key-value pairs in a hash table */
 _HIDDEN unsigned int htable_count ( phtable_t ht )
 {
-	unsigned int i = 0;
-	unsigned int ret = 0;
-	phtnode_t aux = 0;
+	unsigned int	i = 0;
+	unsigned int	ret = 0;
+	phtnode_t	aux = 0;
 
 	if ( !ht )
 		return ret;
@@ -210,8 +210,8 @@ _HIDDEN unsigned int htable_first ( phtable_t ht )
 /* destroys entire hash table */
 _HIDDEN void htable_destroy ( phtable_t *ht )
 {
-	unsigned int i = 0;
-	phtnode_t aux = 0;
+	unsigned int	i = 0;
+	phtnode_t	aux = 0;
 
 	if ( !ht || !(*ht) )
 		return;

@@ -9,9 +9,9 @@
  */
 unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 {
-	const char * data = key;
-	unsigned int hash = len + initval, tmp;
-	int rem;
+	const char	*data = key;
+	unsigned int	hash = len + initval, tmp;
+	int		rem;
 
 	if (len <= 0 || !data )
 		return 0;
@@ -20,7 +20,8 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 	len >>= 2;
 
 	/* Main loop */
-	for (; len > 0; len--) {
+	for (; len > 0; len--)
+	{
 		/* Mix 32bit chunk of the data */
 		hash += get16bits(data);
 		tmp   = (get16bits(data+2) << 11) ^ hash;
@@ -30,20 +31,23 @@ unsigned int sfhash(const void * key, unsigned int len, unsigned int initval)
 	}
 
 	/* Handle end cases */
-	switch (rem) {
-	case 3:	hash += *((unsigned short *)data);
-		hash ^= hash << 16;
-		hash ^= data[sizeof(unsigned short)] << 18;
-		hash += hash >> 11;
-		break;
-	case 2:	hash += *((unsigned short *)data);
-		hash ^= hash << 11;
-		hash += hash >> 17;
-		break;
-	case 1: hash += *data;
-		hash ^= hash << 10;
-		hash += hash >> 1;
-		break;
+	switch (rem)
+	{
+		case 3:	hash += *((unsigned short *)data);
+			hash ^= hash << 16;
+			hash ^= data[sizeof(unsigned short)] << 18;
+			hash += hash >> 11;
+			break;
+
+		case 2:	hash += *((unsigned short *)data);
+			hash ^= hash << 11;
+			hash += hash >> 17;
+			break;
+
+		case 1: hash += *data;
+			hash ^= hash << 10;
+			hash += hash >> 1;
+			break;
 	}
 
 	/* Force "avalanching" of final 127 bits */

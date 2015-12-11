@@ -36,12 +36,7 @@
 #include <sys/time.h>
 #include <libntoh.h>
 
-static struct
-{
-	unsigned short		init;
-	pntoh_tcp_session_t	sessions_list;
-	ntoh_lock_t			lock;
-}params = {0,0};
+static ntoh_tcp_params_t params = { 0 , 0 };
 
 #define IS_TIMEWAIT(peer,side) (peer.status == DEFAULT_TCP_TIMEWAIT_TIMEOUT || side.status == DEFAULT_TCP_TIMEWAIT_TIMEOUT )
 
@@ -131,15 +126,15 @@ inline static void flush_peer_queues ( pntoh_tcp_session_t session , pntoh_tcp_s
 		while ( peers[i]->segments != 0 )
 		{
 			seg = peers[i]->segments;
-            if (i == 0)
-                seg->origin = NTOH_SENT_BY_CLIENT;
-            else
-                seg->origin = NTOH_SENT_BY_SERVER;
+			if (i == 0)
+				seg->origin = NTOH_SENT_BY_CLIENT;
+			else
+				seg->origin = NTOH_SENT_BY_SERVER;
 
-            peers[i]->segments = seg->next;
+			peers[i]->segments = seg->next;
 
-            send_single_segment(session,stream,peers[i],peers[(i+1)%2] , seg , seg->payload_len > 0 ? NTOH_REASON_DATA : NTOH_REASON_SYNC , extra );
-        }
+			send_single_segment(session,stream,peers[i],peers[(i+1)%2] , seg , seg->payload_len > 0 ? NTOH_REASON_DATA : NTOH_REASON_SYNC , extra );
+		}
 }
 
 /** @brief Remove the stream from the session streams hash table, and notify the user **/
@@ -182,7 +177,7 @@ inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_strea
 	if ( item->client.receive )
 		((pntoh_tcp_callback_t)item->function)(item,&item->client, &item->server,0, reason , extra );
 
-    free_lockaccess ( &item->lock );
+	free_lockaccess ( &item->lock );
 
 	free ( item );
 	*stream = 0;
@@ -202,7 +197,7 @@ inline static void __tcp_free_stream ( pntoh_tcp_session_t session , pntoh_tcp_s
 /** @brief Frees a TCP session **/
 inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 {
-	pntoh_tcp_session_t ptr = 0;
+	pntoh_tcp_session_t	ptr = 0;
 	pntoh_tcp_stream_t 	item = 0;
 	ntoh_tcp_key_t		first = 0;
 
@@ -210,24 +205,22 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 		params.sessions_list = session->next;
 	else{
 		for ( ptr = params.sessions_list ; ptr != 0 && ptr->next != session ; ptr = ptr->next );
-
 		if ( ptr != 0 )
 			ptr->next = session->next;
 	}
 
 	lock_access( &session->lock );
 
-
 	while ( ( first = htable_first ( session->timewait ) ) != 0 )
 	{
-	  item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first,0);
+		item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first,0);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
 	while ( ( first = htable_first ( session->streams ) ) != 0 )
 	{
-	  item = (pntoh_tcp_stream_t)htable_remove(session->streams,first, 0);
+		item = (pntoh_tcp_stream_t)htable_remove(session->streams,first, 0);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
@@ -244,9 +237,9 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	htable_destroy ( &session->streams );
 	htable_destroy ( &session->timewait );
 
-    free ( session );
+	free ( session );
 
-    return;
+	return;
 }
 
 inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
@@ -258,8 +251,8 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 	unsigned int		i = 0;
 	unsigned short		timedout = 0;
 	pntoh_tcp_stream_t	item;
-	phtnode_t			node = 0;
-	phtnode_t			prev = 0;
+	phtnode_t		node = 0;
+	phtnode_t		prev = 0;
 
 	lock_access( &session->lock );
 
@@ -358,7 +351,7 @@ static void *timeouts_thread ( void *p )
 		poll ( 0 , 0 , DEFAULT_TIMEOUT_DELAY );
 	}
 
-    pthread_exit( 0 );
+	pthread_exit( 0 );
 	//dummy return
 	return 0;
 }
@@ -411,7 +404,7 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 		return 0;
 	}
 
-    ntoh_tcp_init();
+	ntoh_tcp_init();
 
 	session->streams = htable_map ( max_streams );
 	session->timewait = htable_map ( max_timewait );
@@ -420,26 +413,26 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 	sem_init ( &session->max_timewait , 0 , max_timewait );
 
 	session->lock.use = 0;
-    pthread_mutex_init( &session->lock.mutex, 0 );
-    pthread_cond_init( &session->lock.pcond, 0 );
+	pthread_mutex_init( &session->lock.mutex, 0 );
+	pthread_cond_init( &session->lock.pcond, 0 );
 
 	srand((int)time(NULL));
 
 	session->rand = rand();
 
 
-    lock_access ( &params.lock );
+	lock_access ( &params.lock );
 
-    if ( params.sessions_list != 0 )
-    	session->next = params.sessions_list;
-    params.sessions_list = session;
+	if ( params.sessions_list != 0 )
+		session->next = params.sessions_list;
+	params.sessions_list = session;
 
-    unlock_access ( &params.lock );
+	unlock_access ( &params.lock );
 
-    if ( error != 0 )
-    	*error = NTOH_OK;
+	if ( error != 0 )
+		*error = NTOH_OK;
 
-    pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
+	pthread_create ( &session->tID , 0 , timeouts_thread , (void*) session );
 
 	return session;
 }
@@ -457,7 +450,7 @@ void ntoh_tcp_free_session ( pntoh_tcp_session_t session )
 	unlock_access ( &params.lock );
 
 
-    return;
+	return;
 }
 
 /** @brief API to free a TCP stream (wrapper) **/
@@ -491,7 +484,7 @@ void ntoh_tcp_exit( void )
 
 	free_lockaccess ( &params.lock );
 
-    params.init = 0;
+	params.init = 0;
 
 	return;
 }
@@ -503,10 +496,10 @@ void ntoh_tcp_init ( void )
 		return;
 
 	params.lock.use = 0;
-    pthread_mutex_init( &params.lock.mutex, 0 );
-    pthread_cond_init( &params.lock.pcond, 0 );
+	pthread_mutex_init( &params.lock.mutex, 0 );
+	pthread_cond_init( &params.lock.pcond, 0 );
 
-    params.init = 1;
+	params.init = 1;
 
 	return;
 }
@@ -612,12 +605,12 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	stream->status = stream->client.status = stream->server.status = NTOH_STATUS_CLOSED;
 	stream->function = (void*) function;
 	stream->udata = udata;
-    stream->enable_check_timeout = enable_check_timeout;// @contrib: di3online - https://github.com/di3online
-    stream->enable_check_nowindow = enable_check_nowindow;// @contrib: di3online - https://github.com/di3online
+	stream->enable_check_timeout = enable_check_timeout;// @contrib: di3online - https://github.com/di3online
+	stream->enable_check_nowindow = enable_check_nowindow;// @contrib: di3online - https://github.com/di3online
 
 	stream->lock.use = 0;
-    pthread_mutex_init( &stream->lock.mutex, 0 );
-    pthread_cond_init( &stream->lock.pcond, 0 );
+	pthread_mutex_init( &stream->lock.mutex, 0 );
+	pthread_cond_init( &stream->lock.pcond, 0 );
 
 	htable_insert ( session->streams , key , stream );
 
@@ -795,7 +788,7 @@ inline static pntoh_tcp_segment_t new_segment ( unsigned long seq , unsigned lon
 inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , pntoh_tcp_peer_t origin , pntoh_tcp_peer_t destination , unsigned int ack , unsigned short first , int extra, int who )
 {
 	pntoh_tcp_segment_t 	segment = 0;
-	unsigned int			ret = 0;
+	unsigned int		ret = 0;
 
 
 	if ( !origin->segments )
@@ -810,9 +803,9 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 		/*if ( ! segment->payload_len )
 			return ret;*/
 
-        segment->origin = who;// @contrib: di3online - https://github.com/di3online
+	        segment->origin = who;// @contrib: di3online - https://github.com/di3online
 
-        origin->segments = segment->next;
+	        origin->segments = segment->next;
 
 		send_single_segment ( session , stream , origin , destination , segment , segment->payload_len > 0 ? NTOH_REASON_DATA : NTOH_REASON_SYNC , extra );
 		ret++;
@@ -834,13 +827,13 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 			          // Add a new option to continue treatment now, but this option is how to deal with the follow-up
 			          // For example, a reference window OOO did not do
 
-            goto tosend;
-        }
+			goto tosend;
+        	}
 
 		tosend:
 			/* unlink the segment */
 			segment = origin->segments;
-            segment->origin = who;// @contrib: di3online - https://github.com/di3online
+			segment->origin = who;// @contrib: di3online - https://github.com/di3online
 
 			origin->segments = segment->next;
 
@@ -954,8 +947,8 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	}
 
 	/* check segment seq and ack */
-    if ( ! origin->segments )
-        return;
+	if ( ! origin->segments )
+		return;
 
 	if ( origin->segments->seq == origin->next_seq && origin->segments->ack == destination->next_seq )
 	{
@@ -1059,25 +1052,25 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	if ( stream->status != NTOH_STATUS_CLOSED && origin->receive )
 		((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , segment , NTOH_REASON_SYNC , 0 );
 
-    free ( segment );
+	free ( segment );
 
 	/* should we add this stream to TIMEWAIT queue? */
 	if ( stream->status == NTOH_STATUS_CLOSING && IS_TIMEWAIT(stream->client , stream->server) )
 	{
-	    if ( ! htable_find ( session->timewait , stream->key, 0 ) )
-	    {
-            htable_remove ( session->streams , stream->key, 0 );
-            sem_post ( &session->max_streams );
+		if ( ! htable_find ( session->timewait , stream->key , 0 ) )
+		{
+			htable_remove ( session->streams , stream->key, 0 );
+			sem_post ( &session->max_streams );
 
-            while ( sem_trywait ( &session->max_timewait ) != 0 )
-            {
-                key = htable_first ( session->timewait );
-                twait = htable_remove ( session->timewait , key, 0 );
-                __tcp_free_stream ( session , &twait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
-            }
+			while ( sem_trywait ( &session->max_timewait ) != 0 )
+			{
+				key = htable_first ( session->timewait );
+				twait = htable_remove ( session->timewait , key, 0 );
+				__tcp_free_stream ( session , &twait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+			}
 
-            htable_insert ( session->timewait , stream->key , stream );
-        }
+			htable_insert ( session->timewait , stream->key , stream );
+		}
 	}
 
 	send_peer_segments ( session , stream , destination , origin , origin->next_seq , 0 , 0, who );
@@ -1094,21 +1087,21 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 
 	/* only store segments with data */
 	if ( payload_len > 0 )
-    {
-        if (stream->enable_check_nowindow) // @contrib: di3online - https://github.com/di3online
-        {
-            /* if we have no space */
-            while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
+	{
+		if (stream->enable_check_nowindow) // @contrib: di3online - https://github.com/di3online
+		{
+			/* if we have no space */
+			while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
 
-            /* we're in trouble */
-            if ( origin->totalwin < payload_len )
-                return NTOH_NO_WINDOW_SPACE_LEFT;
-        }
-    }
+			/* we're in trouble */
+			if ( origin->totalwin < payload_len )
+				return NTOH_NO_WINDOW_SPACE_LEFT;
+		}
+	}
 
-    /* creates a new segment and push it into the queue */
-    segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );
-    queue_segment ( session , origin , segment );
+	/* creates a new segment and push it into the queue */
+	segment = new_segment ( seq , ack , payload_len , tcp->th_flags , udata );
+	queue_segment ( session , origin , segment );
 
 	/* wants to close the connection ? */
 	if ( ( tcp->th_flags & (TH_FIN | TH_RST) ) || origin->final_seq != 0 )
@@ -1116,12 +1109,12 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 		if ( ! origin->final_seq )
 			origin->final_seq = seq;
 
-        handle_closing_connection ( session , stream , origin , destination , segment, who );
+        	handle_closing_connection ( session , stream , origin , destination , segment, who );
 	}
 
-    /* ACK the segments of the other side */
-    if ( tcp->th_flags & TH_ACK )
-        send_peer_segments ( session , stream , destination , origin , ack , 0 , 0, !who );
+	/* ACK the segments of the other side */
+	if ( tcp->th_flags & TH_ACK )
+		send_peer_segments ( session , stream , destination , origin , ack , 0 , 0, !who );
 
 	return NTOH_OK;
 }
@@ -1129,16 +1122,16 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 /** @brief API for add an incoming segment **/
 int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct ip *ip , size_t len , void *udata )
 {
-	size_t					iphdr_len = 0;
-	size_t					tcphdr_len = 0;
-	size_t					payload_len = 0;
-	struct tcphdr			*tcp = 0;
-	pntoh_tcp_peer_t		origin = 0;
-	pntoh_tcp_peer_t		destination = 0;
-	unsigned int			tstamp = 0;
-	int						ret = NTOH_OK;
-	pntoh_tcp_segment_t		segment = 0;
-    int						who;// @contrib: di3online - https://github.com/di3online
+	size_t			iphdr_len = 0;
+	size_t			tcphdr_len = 0;
+	size_t			payload_len = 0;
+	struct tcphdr		*tcp = 0;
+	pntoh_tcp_peer_t	origin = 0;
+	pntoh_tcp_peer_t	destination = 0;
+	unsigned int		tstamp = 0;
+	int			ret = NTOH_OK;
+	pntoh_tcp_segment_t	segment = 0;
+	int			who;// @contrib: di3online - https://github.com/di3online
 
 	if ( !stream || !session )
 		return NTOH_ERROR_PARAMS;
@@ -1172,116 +1165,116 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	tcp = (struct tcphdr*) ( (unsigned char*)ip + iphdr_len );
 
 	/* check TCP header */
-    if ( ( tcphdr_len = tcp->th_off * 4 ) < sizeof(struct tcphdr) )
-            return NTOH_INCORRECT_TCP_HEADER_LENGTH;
+	if ( ( tcphdr_len = tcp->th_off * 4 ) < sizeof(struct tcphdr) )
+		return NTOH_INCORRECT_TCP_HEADER_LENGTH;
 
 	if ( !tcp->th_flags || tcp->th_flags == 0xFF )
 		return NTOH_INVALID_FLAGS;
 
 	lock_access ( &stream->lock );
 
-    /* check TCP ports */
-    if ( !(
-    		( tcp->th_dport == stream->tuple.dport && tcp->th_sport == stream->tuple.sport ) ||
+	/* check TCP ports */
+	if ( !(
+		( tcp->th_dport == stream->tuple.dport && tcp->th_sport == stream->tuple.sport ) ||
     		( tcp->th_dport == stream->tuple.sport && tcp->th_sport == stream->tuple.dport )
-    	))
-    	return NTOH_TCP_PORTS_MISMATCH;
+	))
+		return NTOH_TCP_PORTS_MISMATCH;
 
-    payload_len = ntohs(ip->ip_len) - iphdr_len - tcphdr_len;
+	payload_len = ntohs(ip->ip_len) - iphdr_len - tcphdr_len;
 
-    /* get origin and destination */
-    if ( stream->tuple.source == ip->ip_src.s_addr && stream->tuple.sport == tcp->th_sport ) // @contrib: harjotgill - https://github.com/harjotgill
-    {
-    	origin = &stream->client;
-    	destination = &stream->server;
-        who = NTOH_SENT_BY_CLIENT;// @contrib: di3online - https://github.com/di3online
-    }else{
-    	origin = &stream->server;
-    	destination = &stream->client;
-        who = NTOH_SENT_BY_SERVER;// @contrib: di3online - https://github.com/di3online
-    }
+	/* get origin and destination */
+	if ( stream->tuple.source == ip->ip_src.s_addr && stream->tuple.sport == tcp->th_sport ) // @contrib: harjotgill - https://github.com/harjotgill
+	{
+		origin = &stream->client;
+		destination = &stream->server;
+		who = NTOH_SENT_BY_CLIENT;// @contrib: di3online - https://github.com/di3online
+	}else{
+		origin = &stream->server;
+		destination = &stream->client;
+		who = NTOH_SENT_BY_SERVER;// @contrib: di3online - https://github.com/di3online
+	}
 
-    get_timestamp ( tcp , tcphdr_len , &tstamp );
+	get_timestamp ( tcp , tcphdr_len , &tstamp );
 
-    /* PAWS check */
-    if ( tstamp > 0 && origin->lastts > 0 )
-    {
-    	if ( tstamp < origin->lastts )
-    	{
-    		ret = NTOH_PAWS_FAILED;
-    		goto exitp;
-    	}
+	/* PAWS check */
+	if ( tstamp > 0 && origin->lastts > 0 )
+	{
+		if ( tstamp < origin->lastts )
+		{
+			ret = NTOH_PAWS_FAILED;
+			goto exitp;
+		}
 
-        if ( ntohl(tcp->th_seq) <= origin->next_seq )
-        	origin->lastts = tstamp;
+		if ( ntohl(tcp->th_seq) <= origin->next_seq )
+			origin->lastts = tstamp;
 
-    }else if ( tstamp > 0 && !(origin->lastts) )
-    	origin->lastts = tstamp;
+	}else if ( tstamp > 0 && !(origin->lastts) )
+		origin->lastts = tstamp;
 
-    if ( origin->next_seq > 0 && (origin->isn - ntohl ( tcp->th_seq ) ) < origin->next_seq )
-    {
-    	ret = NTOH_TOO_LOW_SEQ_NUMBER;
-    	goto exitp;
-    }
+	if ( origin->next_seq > 0 && (origin->isn - ntohl ( tcp->th_seq ) ) < origin->next_seq )
+	{
+		ret = NTOH_TOO_LOW_SEQ_NUMBER;
+		goto exitp;
+	}
 
-    if ( destination->next_seq > 0 && (origin->ian - ntohl(tcp->th_ack) ) < destination->next_seq )
-    {
-    	ret = NTOH_TOO_LOW_ACK_NUMBER;
-    	goto exitp;
-    }
+	if ( destination->next_seq > 0 && (origin->ian - ntohl(tcp->th_ack) ) < destination->next_seq )
+	{
+		ret = NTOH_TOO_LOW_ACK_NUMBER;
+		goto exitp;
+	}
 
-    /* @todo some TCP/IP stacks implementations overloads the MSS on certain segments */
-    /*if ( origin->mss > 0 && payload_len > origin->mss )
-    	return NTOH_SEGMENT_EXCEEDS_MSS;*/
+	/* @todo some TCP/IP stacks implementations overloads the MSS on certain segments */
+	/*if ( origin->mss > 0 && payload_len > origin->mss )
+		return NTOH_SEGMENT_EXCEEDS_MSS;*/
 
-    /* switch between connection status */
-    switch ( stream->status )
-    {
-    	case NTOH_STATUS_CLOSED:
-    	case NTOH_STATUS_SYNSENT:
-    	case NTOH_STATUS_SYNRCV:
-    		if ( payload_len > 0 )
-    		{
-    			ret = NTOH_HANDSHAKE_FAILED;
-    			goto exitp;
-    		}
+	/* switch between connection status */
+	switch ( stream->status )
+	{
+		case NTOH_STATUS_CLOSED:
+		case NTOH_STATUS_SYNSENT:
+		case NTOH_STATUS_SYNRCV:
+			if ( payload_len > 0 )
+			{
+				ret = NTOH_HANDSHAKE_FAILED;
+				goto exitp;
+			}
 
-    		ret = handle_new_connection ( stream , tcp , origin ,  destination , udata );
-    		if ( ret == NTOH_OK )
-    		{
-    			if ( origin->receive )
-    			{
-    				if ( stream->status == NTOH_STATUS_ESTABLISHED )
-    					((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_ESTABLISHED );
-    				else
-    					((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
-    			}
-    		}else{
-    			lock_access ( &session->lock );
-    			delete_stream ( session , &stream , NTOH_REASON_SYNC , ret );
-    			unlock_access ( &session->lock );
-    		}
+			ret = handle_new_connection ( stream , tcp , origin ,  destination , udata );
+			if ( ret == NTOH_OK )
+			{
+				if ( origin->receive )
+				{
+					if ( stream->status == NTOH_STATUS_ESTABLISHED )
+						((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_ESTABLISHED );
+					else
+						((pntoh_tcp_callback_t)stream->function) ( stream , origin , destination , 0 , NTOH_REASON_SYNC , NTOH_REASON_SYNC );
+				}
+			}else{
+				lock_access ( &session->lock );
+				delete_stream ( session , &stream , NTOH_REASON_SYNC , ret );
+				unlock_access ( &session->lock );
+			}
 
-    		break;
+			break;
 
-    	case NTOH_STATUS_ESTABLISHED:
-    		ret = handle_established_connection ( session , stream , tcp , payload_len , origin , destination , udata, who );
-    		break;
+		case NTOH_STATUS_ESTABLISHED:
+			ret = handle_established_connection ( session , stream , tcp , payload_len , origin , destination , udata, who );
+			break;
 
-    	default:
-    		segment = new_segment( ntohl ( tcp->th_seq ) - origin->isn , ntohl ( tcp->th_ack ) - origin->ian , payload_len , tcp->th_flags , udata );
-    		queue_segment ( session , origin , segment );
-    		handle_closing_connection ( session , stream , origin , destination , segment, who );
+		default:
+			segment = new_segment( ntohl ( tcp->th_seq ) - origin->isn , ntohl ( tcp->th_ack ) - origin->ian , payload_len , tcp->th_flags , udata );
+			queue_segment ( session , origin , segment );
+			handle_closing_connection ( session , stream , origin , destination , segment, who );
 
-    		if ( stream->status == NTOH_STATUS_CLOSED )
-    		{
-    			lock_access ( &session->lock );
-    			__tcp_free_stream ( session , &stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
-    			unlock_access ( &session->lock );
-    			stream = 0;
-    		}
-    		break;
-    }
+			if ( stream->status == NTOH_STATUS_CLOSED )
+			{
+				lock_access ( &session->lock );
+				__tcp_free_stream ( session , &stream , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
+				unlock_access ( &session->lock );
+				stream = 0;
+			}
+			break;
+	}
 
 	if ( ret == NTOH_OK )
 	{

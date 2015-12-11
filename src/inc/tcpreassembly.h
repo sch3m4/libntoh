@@ -111,19 +111,19 @@ typedef struct _tcp_segment_
 {
 	struct _tcp_segment_ 	*next;
 	///SEQ number
-	unsigned long 			seq;
+	unsigned long		seq;
 	///ACK number
-	unsigned long 			ack;
+	unsigned long 		ack;
 	///flags
-	unsigned char 			flags;
+	unsigned char 		flags;
 	///payload length
-	unsigned int 			payload_len;
+	unsigned int 		payload_len;
 	///segment origin
-	unsigned short 			origin;
+	unsigned short 		origin;
 	///TCP timestamp
-	struct timeval 			tv;
+	struct timeval 		tv;
 	///user provided data
-	void 					*user_data;
+	void 			*user_data;
 } ntoh_tcp_segment_t, *pntoh_tcp_segment_t;
 
 /** @brief peer information **/
@@ -146,7 +146,7 @@ typedef struct
 	///peer status
 	unsigned int 		status;
 	///segments list
-	pntoh_tcp_segment_t segments;
+	pntoh_tcp_segment_t	segments;
 	///Max. Segment Size
 	unsigned int 		mss;
 	///Selective ACK.
@@ -164,7 +164,7 @@ typedef struct
 /** @brief connection data **/
 typedef struct _tcp_stream_
 {
-	struct _tcp_stream_ *next;
+	struct _tcp_stream_	*next;
 
 	///data to generate the key to identify the connection
 	ntoh_tcp_tuple5_t 	tuple;
@@ -179,7 +179,7 @@ typedef struct _tcp_stream_
 	///who closed the connection
 	unsigned short 		closedby;
 	///user-defined function to receive data
-	void 				*function;
+	void 			*function;
 	///last activity
 	struct timeval 		last_activ;
 	///max. allowed SYN retries
@@ -187,8 +187,8 @@ typedef struct _tcp_stream_
 	///max. allowed SYN/ACK retries
 	unsigned int 		synack_retries;
 	///user-defined data linked to this stream
-	void 				*udata;
-	ntoh_lock_t			lock;
+	void 			*udata;
+	ntoh_lock_t		lock;
 
     unsigned short 		enable_check_timeout;	// @contrib: di3online - https://github.com/di3online
     unsigned short 		enable_check_nowindow;	// @contrib: di3online - https://github.com/di3online
@@ -203,8 +203,8 @@ typedef struct _tcp_session_
     struct _tcp_session_ 	*next;
 
     /* max. streams */
-    sem_t 					max_streams;
-    sem_t 					max_timewait;
+    sem_t 			max_streams;
+    sem_t 			max_timewait;
 
     /* connections hash table */
     ptcprs_streams_table_t 	streams;
@@ -212,11 +212,18 @@ typedef struct _tcp_session_
     /* TIME-WAIT connections */
     ptcprs_streams_table_t 	timewait;
 
-    int 					rand;
+    int 			rand;
 
-    ntoh_lock_t				lock;
-    pthread_t 				tID;
+    ntoh_lock_t			lock;
+    pthread_t 			tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
+
+typedef struct
+{
+        unsigned short          init;
+        pntoh_tcp_session_t     sessions_list;
+        ntoh_lock_t             lock;
+} ntoh_tcp_params_t , *pntoh_tcp_params_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );
 

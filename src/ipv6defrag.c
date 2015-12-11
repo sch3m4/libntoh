@@ -36,47 +36,44 @@
 #include <sys/time.h>
 #include <libntoh.h>
 
-static struct
-{
-		unsigned short	        init;
-		pntoh_ipv6_session_t    sessions_list;
-		ntoh_lock_t			    lock;
-}params = { 0 , 0 };
+
+static ntoh_ipv6_params_t params = { 0 , 0 };
 
 #define NTOH_GET_IPV6_FRAGMENT_OFFSET(offset)	(ntohs(offset)&~0x01)
 #define NTOH_GET_IPV6_MORE_FRAGMENTS(offset)    ntohs(offset&IP6F_MORE_FRAG)
-#define IS_SET(a,b)								(a & b)
+#define IS_SET(a,b)				(a & b)
 
 inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
-    unsigned char   tmp[50] = {0};
+	unsigned char   tmp[50] = {0};
 	ntoh_ipv6_key_t ret = 0;
 	uint32_t         i;
 
 	if ( !tuple4 || !session )
 		return ret;
 
-    for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
-    {
-        tmp[i] = tuple4->source[i];
-        tmp[sizeof(tuple4->source) + i ] = tuple4->destination[i];
-    }
-    tmp[i] = tuple4->protocol;
-    tmp[i+1] &= tuple4->id;
+	for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
+	{
+		tmp[i] = tuple4->source[i];
+		tmp[sizeof(tuple4->source) + i ] = tuple4->destination[i];
+	}
 
-    // jenkins one-at-time hash algorithm
-    for(ret = i = 0; i < sizeof(tmp) ; ++i)
-    {
-        ret += tmp[i];
-        ret += (ret << 10);
-        ret ^= (ret >> 6);
-    }
+	tmp[i] = tuple4->protocol;
+	tmp[i+1] &= tuple4->id;
 
-    ret += (ret << 3);
-    ret ^= (ret >> 11);
-    ret += (ret << 15);
+	// jenkins one-at-time hash algorithm
+	for(ret = i = 0; i < sizeof(tmp) ; ++i)
+	{
+		ret += tmp[i];
+		ret += (ret << 10);
+		ret ^= (ret >> 6);
+	}
 
-    return ret;
+	ret += (ret << 3);
+	ret ^= (ret >> 11);
+	ret += (ret << 15);
+
+	return ret;
 }
 
 /** @brief API to get the size of the flows table (max allowed flows) **/
@@ -97,21 +94,21 @@ unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 /** @brief API to get a tuple4 **/
 unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tuple )
 {
-    struct ip6_frag *frag;
+	struct ip6_frag *frag;
 
 	if ( !ip || !tuple )
 		return NTOH_ERROR_PARAMS;
 
-    /** @todo: only checks the first header, should we verify them all? **/
-    if ( ip->ip6_nxt != IPPROTO_FRAGMENT )
-        return NTOH_NOT_AN_IP_FRAGMENT;
+	/** @todo: only checks the first header, should we verify them all? **/
+	if ( ip->ip6_nxt != IPPROTO_FRAGMENT )
+		return NTOH_NOT_AN_IP_FRAGMENT;
 
-    memcpy ( (void*)tuple->source , (void*)&(ip->ip6_src) , sizeof ( tuple->source) );
-    memcpy ( (void*)tuple->destination , (void*)&(ip->ip6_dst) , sizeof ( tuple->destination) );
+	memcpy ( (void*)tuple->source , (void*)&(ip->ip6_src) , sizeof ( tuple->source) );
+	memcpy ( (void*)tuple->destination , (void*)&(ip->ip6_dst) , sizeof ( tuple->destination) );
 
-    frag = (struct ip6_frag*)((unsigned char*)ip + sizeof ( struct ip6_hdr));
-    tuple->id = frag->ip6f_ident;  // we doesnt care byte order (no ntoX needed)
-    tuple->protocol = frag->ip6f_nxt;
+	frag = (struct ip6_frag*)((unsigned char*)ip + sizeof ( struct ip6_hdr));
+	tuple->id = frag->ip6f_ident;  // we doesnt care byte order (no ntoX needed)
+	tuple->protocol = frag->ip6f_nxt;
 
 	return NTOH_OK;
 }
@@ -219,9 +216,9 @@ inline static unsigned char *build_datagram ( pntoh_ipv6_session_t session , pnt
 {
 	pntoh_ipv6_fragment_t 	tmp;
 	pntoh_ipv6_fragment_t 	fragment;
-	struct ip6_hdr			*iphdr;
-	unsigned int			offsethdr;
-	unsigned char 			*ret;
+	struct ip6_hdr		*iphdr;
+	unsigned int		offsethdr;
+	unsigned char 		*ret;
 
 	fragment = flow->fragments;
 	iphdr = flow->final_iphdr;
@@ -256,8 +253,8 @@ inline static unsigned char *build_datagram ( pntoh_ipv6_session_t session , pnt
 
 inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flow , unsigned short reason )
 {
-	unsigned char *buffer = 0;
-	pntoh_ipv6_flow_t item = 0;
+	unsigned char		*buffer = 0;
+	pntoh_ipv6_flow_t	item = 0;
 
 	if ( !flow || !(*flow) )
 		return;
@@ -304,7 +301,7 @@ int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t fl
 	unsigned short          offset = 0;
 	unsigned int            data_len = 0;
 	unsigned char           *data = 0;
-	int				        ret = NTOH_OK;
+	int			ret = NTOH_OK;
 	pntoh_ipv6_fragment_t   frag = 0;
 	struct ip6_frag         *frhdr;
 
@@ -324,10 +321,7 @@ int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t fl
 	if ( len <= sizeof(struct ip6_hdr) + sizeof ( struct ip6_frag ) )
 		return NTOH_INCORRECT_LENGTH;
 
-	/* get IP header and data length */
-	/*if ( ( iphdr_len = 4 * ( iphdr->ip_hl ) ) < sizeof(struct ip) )
-		return NTOH_INCORRECT_IP_HEADER_LENGTH;*/
-    iphdr_len = sizeof ( struct ip6_hdr );
+	iphdr_len = sizeof ( struct ip6_hdr );
 
 	if ( len < ntohs( iphdr->ip6_plen ) )
 		return NTOH_NOT_ENOUGH_DATA;
@@ -342,17 +336,18 @@ int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t fl
 	lock_access ( &flow->lock );
 
 	/* check if addresses matches */
-	if ( memcmp ( flow->ident.source , (const void*)&(iphdr->ip6_src) , sizeof ( flow->ident.source )) != 0 || memcmp ( flow->ident.destination , (const void*)&(iphdr->ip6_dst) , sizeof ( flow->ident.destination )) != 0 )
+	if ( memcmp ( flow->ident.source , (const void*)&(iphdr->ip6_src) , sizeof ( flow->ident.source )) != 0 ||
+		memcmp ( flow->ident.destination , (const void*)&(iphdr->ip6_dst) , sizeof ( flow->ident.destination )) != 0 )
 	{
-	    ret = NTOH_IP_ADDRESSES_MISMATCH;
+		ret = NTOH_IP_ADDRESSES_MISMATCH;
 		goto exitp;
 	}
 
-    /** @todo: only checks the first header, should we verify them all? **/
-    if ( iphdr->ip6_nxt != IPPROTO_FRAGMENT )
-        return NTOH_NOT_AN_IP_FRAGMENT;
+	/** @todo: only checks the first header, should we verify them all? **/
+	if ( iphdr->ip6_nxt != IPPROTO_FRAGMENT )
+		return NTOH_NOT_AN_IP_FRAGMENT;
 
-    frhdr = (struct ip6_frag*)((unsigned char*)iphdr + sizeof ( struct ip6_hdr));
+	frhdr = (struct ip6_frag*)((unsigned char*)iphdr + sizeof ( struct ip6_hdr));
 	offset = NTOH_GET_IPV6_FRAGMENT_OFFSET(frhdr->ip6f_offlg);
 
 	/* check if it is a fragment */
@@ -442,8 +437,8 @@ inline static void ip_check_timeouts ( pntoh_ipv6_session_t session )
 	struct timeval		tv = { 0 , 0 };
 	pntoh_ipv6_flow_t	item;
 	unsigned int		i = 0;
-	phtnode_t			node = 0;
-	phtnode_t			prev = 0;
+	phtnode_t		node = 0;
+	phtnode_t		prev = 0;
 
 	lock_access( &session->lock );
 
@@ -497,8 +492,8 @@ static void *timeouts_thread ( void *p )
 
 pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error )
 {
-	pntoh_ipv6_session_t session;
-	unsigned int max_fragments;
+	pntoh_ipv6_session_t	session;
+	unsigned int		max_fragments;
 
 	if ( !max_flows )
 		max_flows = DEFAULT_IPV6_MAX_FLOWS;
@@ -602,10 +597,10 @@ void ntoh_ipv6_init ( void )
 		return;
 
 	params.lock.use = 0;
-    pthread_mutex_init( &params.lock.mutex, 0 );
-    pthread_cond_init( &params.lock.pcond, 0 );
+	pthread_mutex_init( &params.lock.mutex, 0 );
+	pthread_cond_init( &params.lock.pcond, 0 );
 
-    params.init = 1;
+	params.init = 1;
 	return;
 }
 
@@ -623,7 +618,7 @@ void ntoh_ipv6_exit ( void )
 
 	free_lockaccess ( &params.lock );
 
-    params.init = 0;
+	params.init = 0;
 
 	return;
 }

@@ -109,6 +109,13 @@ typedef struct _ipv4_session_
 	ntoh_lock_t 			lock;
 }ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
 
+typedef struct
+{
+        unsigned short          init;
+        pntoh_ipv4_session_t	sessions_list;
+        ntoh_lock_t             lock;
+} ntoh_ipv4_params_t , *pntoh_ipv4_params_t;
+
 /// min. PMTU
 #ifndef MIN_IPV4_FRAGMENT_LENGTH
 # define MIN_IPV4_FRAGMENT_LENGTH	576

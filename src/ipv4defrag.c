@@ -36,12 +36,7 @@
 #include <sys/time.h>
 #include <libntoh.h>
 
-static struct
-{
-	unsigned short		init;
-	pntoh_ipv4_session_t	sessions_list;
-	ntoh_lock_t		lock;
-}params = { 0 , 0 };
+static ntoh_ipv4_params_t params = { 0 , 0 };
 
 #define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
 #define IS_SET(a,b)				(a & b)
@@ -427,8 +422,8 @@ inline static void ip_check_timeouts ( pntoh_ipv4_session_t session )
 	struct timeval		tv = { 0 , 0 };
 	pntoh_ipv4_flow_t	item;
 	unsigned int		i = 0;
-	phtnode_t			node = 0;
-	phtnode_t			prev = 0;
+	phtnode_t		node = 0;
+	phtnode_t		prev = 0;
 
 	lock_access( &session->lock );
 
@@ -482,8 +477,8 @@ static void *timeouts_thread ( void *p )
 
 pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error )
 {
-	pntoh_ipv4_session_t session;
-	unsigned int max_fragments;
+	pntoh_ipv4_session_t	session;
+	unsigned int		max_fragments;
 
 	if ( !max_flows )
 		max_flows = DEFAULT_IPV4_MAX_FLOWS;
@@ -527,9 +522,9 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 
 inline static void __ipv4_free_session ( pntoh_ipv4_session_t session )
 {
-	ntoh_ipv4_key_t	first = 0;
-	pntoh_ipv4_session_t ptr = 0;
-	pntoh_ipv4_flow_t item = 0;
+	ntoh_ipv4_key_t		first = 0;
+	pntoh_ipv4_session_t	ptr = 0;
+	pntoh_ipv4_flow_t	item = 0;
 
 	if ( !session )
 		return;
@@ -587,10 +582,10 @@ void ntoh_ipv4_init ( void )
 		return;
 
 	params.lock.use = 0;
-    pthread_mutex_init( &params.lock.mutex, 0 );
-    pthread_cond_init( &params.lock.pcond, 0 );
+	pthread_mutex_init( &params.lock.mutex, 0 );
+	pthread_cond_init( &params.lock.pcond, 0 );
 
-    params.init = 1;
+	params.init = 1;
 	return;
 }
 
@@ -608,7 +603,7 @@ void ntoh_ipv4_exit ( void )
 
 	free_lockaccess ( &params.lock );
 
-    params.init = 0;
+	params.init = 0;
 
 	return;
 }

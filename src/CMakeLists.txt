@@ -31,7 +31,8 @@ SET_SOURCE_FILES_PROPERTIES ( ${INTERFACE_FILES} PROPERTIES CPLUSCPLUS OFF )
 # required libraries
 FIND_PACKAGE ( Threads REQUIRED )
 FIND_PACKAGE ( SWIG REQUIRED )
-FIND_PACKAGE ( PythonLibs 2.7 REQUIRED )
+SET ( Python_ADDITIONAL_VERSIONS 3.4 )
+FIND_PACKAGE ( PythonLibs 3.4 REQUIRED )
 
 # set include directories
 INCLUDE_DIRECTORIES ( ${LIBNTOH_INC} )
@@ -65,7 +66,7 @@ INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTO
 # pkconfig file
 INSTALL ( FILES ${CMAKE_CURRENT_BINARY_DIR}/ntoh.pc DESTINATION lib/pkgconfig)
 # swig
-execute_process(COMMAND python -c "from distutils.sysconfig import get_python_lib; print get_python_lib()" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND python -c "from distutils.sysconfig import get_python_lib; print (get_python_lib())" OUTPUT_VARIABLE PYTHON_SITE_PACKAGES OUTPUT_STRIP_TRAILING_WHITESPACE)
 install(TARGETS _pyntoh DESTINATION ${PYTHON_SITE_PACKAGES})
 install(FILES ${CMAKE_BINARY_DIR}/pyntoh.py DESTINATION ${PYTHON_SITE_PACKAGES})
 

@@ -42,13 +42,14 @@
 typedef struct
 {
 	/// source IP address
-	unsigned int source;
+	unsigned int	source;
 	/// destination IP address
-	unsigned int destination;
+	unsigned int	destination;
 	/// Transport layer protocol
-	uint8_t protocol;
+	//uint8_t protocol;
+	unsigned char	protocol;
 	/// Identification
-	unsigned short id;
+	unsigned short	id;
 } ntoh_ipv4_tuple4_t, *pntoh_ipv4_tuple4_t;
 
 typedef unsigned int ntoh_ipv4_key_t;
@@ -57,7 +58,7 @@ typedef unsigned int ntoh_ipv4_key_t;
 typedef struct _ipv4_fragment_
 {
 	/// pointer to the next fragment
-	struct _ipv4_fragment_ *next;
+	struct _ipv4_fragment_		*next;
 	/// fragment offset
 	unsigned int 			offset;
 	/// fragment data length
@@ -74,19 +75,19 @@ typedef struct
 	/// flow key
 	ntoh_ipv4_key_t 		key;
 	/// fragments list
-	pntoh_ipv4_fragment_t 	fragments;
+	pntoh_ipv4_fragment_t 		fragments;
 	/// total amount of received data
-	size_t 					meat;
+	size_t 				meat;
 	/// total amount of expected data
-	size_t 					total;
+	size_t 				total;
 	/// final fragment received?
-	struct ip 				*final_iphdr;
+	struct ip 			*final_iphdr;
 	/// user defined function to receive defragmented packets
-	void 					*function;
+	void 				*function;
 	/// last activity
 	struct timeval 			last_activ;
 	/// user-defined data
-	void 					*udata;
+	void 				*udata;
 	ntoh_lock_t 			lock;
 } ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;
 
@@ -96,15 +97,15 @@ typedef phtable_t pipv4_flows_table_t;
 /** @brief Structure to store global parameters */
 typedef struct _ipv4_session_
 {
-	struct _ipv4_session_ 	*next;
+	struct _ipv4_session_ 		*next;
 
 	/// max. number of IP flows
-	sem_t 					max_flows;
-	sem_t 					max_fragments;
+	sem_t 				max_flows;
+	sem_t 				max_fragments;
 	/// hash table to store IP flows
-	pipv4_flows_table_t 	flows;
+	pipv4_flows_table_t 		flows;
 	/// connection tables related
-	pthread_t 				tID;
+	pthread_t 			tID;
 	ntoh_lock_t 			lock;
 }ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
 
@@ -115,7 +116,7 @@ typedef struct _ipv4_session_
 
 /// max. IPv4 datagram fragment length
 #ifndef MAX_IPV4_DATAGRAM_LENGTH
-# define MAX_IPV4_DATAGRAM_LENGTH		65535
+# define MAX_IPV4_DATAGRAM_LENGTH	65535
 #endif
 
 /// IPv4 fragment timeout

@@ -59,19 +59,19 @@
 
 typedef struct
 {
-	unsigned char *data;
-	size_t data_len;
-	char *path;
+	unsigned char	*data;
+	size_t		data_len;
+	char		*path;
 } peer_info_t , *ppeer_info_t;
 
 #define RECV_CLIENT	1
 #define RECV_SERVER	2
 
 /* capture handle */
-pcap_t 					*handle = 0;
-pntoh_tcp_session_t		tcp_session = 0;
+pcap_t 			*handle = 0;
+pntoh_tcp_session_t	tcp_session = 0;
 pntoh_ipv4_session_t	ipv4_session = 0;
-unsigned short			receive = 0;
+unsigned short		receive = 0;
 
 /**
  * @brief Exit function (closes the capture handle and releases all resource from libntoh)

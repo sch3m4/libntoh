@@ -49,11 +49,31 @@ fi
 echo "[i] PKG_CONFIG_PATH set to: $pkgconfig_path"
 echo ''
 
-
+rm -rf $build_dir 2>/dev/null
 mkdir $build_dir 2>/dev/null
 cd $build_dir
 $cmake ../
 $make
+
+if [ $? -eq 0 ]
+then
+	response=''
+	while [ $(echo -n "$response" | grep -c "[yn]") -eq 0 ]
+	do
+		read -e -p "Do you want to perform the installation? [y/n]: " -i "y" response
+	done
+
+	if [ "$response" == "y" ]
+	then
+		command='make'
+		if [ $UID -gt 0 ]
+		then
+			command="sudo $command"
+		fi
+		command="$command install"
+		$command
+	fi
+fi
 
 unset pkgconfig_path build_dir cmake make pkgconfig libntoh_pcpath
 exit 0

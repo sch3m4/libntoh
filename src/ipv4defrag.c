@@ -38,13 +38,13 @@
 
 static struct
 {
-		unsigned short		init;
-		pntoh_ipv4_session_t sessions_list;
-		ntoh_lock_t			lock;
+	unsigned short		init;
+	pntoh_ipv4_session_t	sessions_list;
+	ntoh_lock_t		lock;
 }params = { 0 , 0 };
 
 #define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
-#define IS_SET(a,b)								(a & b)
+#define IS_SET(a,b)				(a & b)
 
 inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {

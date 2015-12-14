@@ -125,7 +125,7 @@ typedef struct
 
 /// max. IPv6 datagram fragment length
 #ifndef MAX_IPV6_DATAGRAM_LENGTH
-# define MAX_IPV6_DATAGRAM_LENGTH		4294967295UL   // max size of jumbograms (using hop-by-hop options header)
+# define MAX_IPV6_DATAGRAM_LENGTH	4294967295UL   // max size of jumbograms (using hop-by-hop options header)
 #endif
 
 /// IPv6 fragment timeout
@@ -169,6 +169,15 @@ void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session );
  * @return A pointer to the new session or 0 when it fails
  */
 pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error );
+
+/**
+ * @brief resizes the hash table of a given IPv4 session
+ * @param IPv4 Session
+ * @param size The new size of the hash table
+ * @return NTOH_OK on success or the corresponding error code
+ *
+**/
+int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t size );
 
 /**
  * @brief Finds an IP flow

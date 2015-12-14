@@ -169,6 +169,15 @@ void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session );
 pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned long max_mem , unsigned int *error );
 
 /**
+ * @brief resizes the hash table of a given IPv4 session
+ * @param IPv4 Session
+ * @param size The new size of the hash table
+ * @return NTOH_OK on success or the corresponding error code
+ *
+**/
+int ntoh_ipv4_resize_session ( pntoh_ipv4_session_t session , size_t size );
+
+/**
  * @brief Finds an IP flow
  * @param tuple4 Flow information
  * @return Pointer to the flow on success or 0 when fails

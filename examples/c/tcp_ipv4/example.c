@@ -190,12 +190,12 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 	ntoh_tcp_tuple5_t	tcpt5;
 	pntoh_tcp_stream_t	stream;
 	struct tcphdr 		*tcp;
-	size_t 				size_ip;
-	size_t				total_len;
-	size_t				size_tcp;
-	size_t				size_payload;
+	size_t 			size_ip;
+	size_t			total_len;
+	size_t			size_tcp;
+	size_t			size_payload;
 	unsigned char		*payload;
-	int					ret;
+	int			ret;
 	unsigned int		error;
 
 	size_ip = iphdr->ip_hl * 4;
@@ -315,7 +315,7 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 			write_data( (ppeer_info_t) seg->user_data );
 
 			if ( extra != 0 )
-					fprintf ( stderr , "- %s" , ntoh_get_reason ( extra ) );
+					fprintf ( stderr , " - %s" , ntoh_get_reason ( extra ) );
 
 			break;
 	}
@@ -334,7 +334,7 @@ void ipv4_callback ( pntoh_ipv4_flow_t flow , pntoh_ipv4_tuple4_t tuple , unsign
 	unsigned int i = 0;
 
 	fprintf( stderr, "\n\n[i] Got an IPv4 datagram! (%s) %s --> ", ntoh_get_reason(reason) , inet_ntoa( *(struct in_addr*) &tuple->source ) );
-	fprintf( stderr, "%s | %i/%i bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	if ( tuple->protocol == IPPROTO_TCP )
 		send_tcp_segment ( (struct ip*) data , &tcp_callback );
@@ -353,16 +353,16 @@ int main ( int argc , char *argv[] )
 	int c;
 
 	/* pcap */
-	char 				errbuf[PCAP_ERRBUF_SIZE];
+	char 			errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program 	fp;
-	char 				filter_exp[] = "ip";
-	char 				*source = 0;
-	char 				*filter = filter_exp;
-	const unsigned char *packet = 0;
+	char 			filter_exp[] = "ip";
+	char 			*source = 0;
+	char 			*filter = filter_exp;
+	const unsigned char	*packet = 0;
 	struct pcap_pkthdr 	header;
 
 	/* packet dissection */
-	struct ip		*ip;
+	struct ip	*ip;
 	unsigned int	error;
 
 	/* extra */
@@ -375,7 +375,6 @@ int main ( int argc , char *argv[] )
 	fprintf( stderr, "\n# ----------------------- #" );
 	fprintf( stderr, "\n#  http://safetybits.net  #" );
 	fprintf( stderr, "\n#   chema@safetybits.net  #" );
-	fprintf( stderr, "\n#   sch3m4@brutalsec.net  #" );
 	fprintf( stderr, "\n###########################\n" );
 
 	fprintf( stderr, "\n[i] libntoh version: %s\n", ntoh_version() );

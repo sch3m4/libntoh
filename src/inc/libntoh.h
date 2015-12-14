@@ -80,7 +80,7 @@ extern "C"
 #define NTOH_REASON_TIMEDOUT			5
 #define NTOH_REASON_EXIT			6
 #define NTOH_REASON_OOO				7
-#define NTOH_REASON_XXX             		8 // @contrib: di3online - https://github.com/di3online
+#define NTOH_REASON_SEGMENT_LOST       		8 // @contrib: di3online - https://github.com/di3online
 #define NTOH_REASON_MAX_SYN_RETRIES_REACHED	9
 #define NTOH_REASON_MAX_SYNACK_RETRIES_REACHED	10
 #define NTOH_REASON_SYNC			11

@@ -418,14 +418,17 @@ exitp:
 
 unsigned int ntoh_ipv6_count_flows ( pntoh_ipv6_session_t session )
 {
-	unsigned int ret = 0;
+	unsigned int	ret = 0;
+	int		count;
 
 	if ( !params.init )
 		return ret;
 
 	lock_access( &params.lock );
 
-	ret = htable_count ( session->flows );
+        sem_getvalue ( &session->max_flows , &count );
+        ret = session->flows->table_size - count;
+//	ret = htable_count ( session->flows );
 
 	unlock_access( &params.lock );
 
@@ -457,11 +460,9 @@ inline static void ip_check_timeouts ( pntoh_ipv6_session_t session )
 				lock_access ( &item->lock );
 				__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
 				if (node != prev)
-				{
 				      node = prev;
-				}else{
+				else
 				      node = 0;
-				}
 			}else{
 				prev = node;
 				node = node->next;
@@ -590,6 +591,53 @@ void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
 
     return;
 }
+
+int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t newsize )
+{
+        pipv6_flows_table_t	newht = 0 , curht = 0;
+        pntoh_ipv6_flow_t	item = 0;
+        int                     current = 0;
+
+	if ( ! session )
+		return NTOH_INCORRECT_SESSION;
+
+	if ( ! newsize || newsize == session->flows->table_size )
+		return NTOH_OK;
+
+	lock_access ( &session->lock );
+
+	curht = session->flows;
+
+        // increase the size
+        if ( newsize > curht->table_size )
+                newht = htable_map ( newsize );
+        // decrease the size
+        else
+        {
+                sem_getvalue ( &session->max_flows , &current );
+                if ( newsize < current )
+                {
+                        unlock_access ( &session->lock );
+                        return NTOH_ERROR_NOSPACE;
+                }
+        }
+
+        // moves all the flows to the new sessions table
+        while ( ( current = htable_first ( curht ) ) != 0 )
+        {
+                item = (pntoh_ipv6_flow_t) htable_remove ( curht , current , 0 );
+                htable_insert ( newht , current , item );
+        }
+        htable_destroy ( &curht );
+
+	sem_init ( &session->max_flows , 0 , newsize );
+	session->flows = newht;
+
+	unlock_access ( &session->lock );
+
+	return NTOH_OK;
+}
+
 
 void ntoh_ipv6_init ( void )
 {

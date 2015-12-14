@@ -57,6 +57,13 @@ enum _ntoh_tcp_status_
 	NTOH_STATUS_TIMEWAIT
 };
 
+/** @brief table to be resized **/
+enum tcprs_resize_table
+{
+	NTOH_RESIZE_STREAMS = 0,
+	NTOH_RESIZE_TIMEWAIT
+};
+
 /** @brief who closed the connection? **/
 enum tcprs_who_closed
 {
@@ -372,5 +379,15 @@ unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session );
  * @return NTOH_OK on success or the corresponding error code
  */
 unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple );
+
+/**
+ * @brief Resizes the hash tables (streams | timewait) of a given TCP session
+ * @param session TCP Session
+ * @param table   Table action (NTOH_RESIZE_STREAMS,NTOH_RESIZE_TIMEWAIT)
+ * @param newsize The new size of the table
+ * @return NTOH_OK on success or the corresponding error code
+ *
+ */
+int ntoh_tcp_resize_session ( pntoh_tcp_session_t session , unsigned short table , size_t newsize );
 
 #endif /* __LIBNTOH_TCPRS_H__ */

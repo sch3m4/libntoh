@@ -83,7 +83,7 @@ static const char reason_descriptions[][30]=
 		"Timedout" ,
 		"Exiting" ,
 		"Out-Of-Order" ,
-		"Not really sure...", // about
+		"Previous segment lost", // about
 		"Max. SYN retries reached" ,
 		"Max. SYN/ACK retries reached" ,
 		"Synchronization",

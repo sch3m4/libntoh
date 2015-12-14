@@ -625,14 +625,17 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 /** @brief API to get the amount of streams stored in a session **/
 unsigned int ntoh_tcp_count_streams ( pntoh_tcp_session_t session )
 {
-	unsigned int ret = 0;
+	unsigned int	ret = 0;
+	int		count;
 
 	if ( !session )
 		return ret;
 
 	lock_access( &session->lock );
 
-	ret = htable_count ( session->streams );
+	sem_getvalue ( &session->max_streams , &count );
+	ret = session->streams->table_size - count;
+	//ret = htable_count ( session->streams );
 
 	unlock_access( &session->lock );
 	return ret;
@@ -822,12 +825,13 @@ inline static unsigned int send_peer_segments ( pntoh_tcp_session_t session , pn
 			extra = NTOH_REASON_OOO;
 			goto tosend;
 		}else { // @contrib: di3online - https://github.com/di3online
-			extra = NTOH_REASON_XXX;
+			extra = NTOH_REASON_SEGMENT_LOST; /// NTOH_REASON_XXX; @contrib: sch3m4 - lost segment
 			// break; // before treatment is not followed by processing problems in testing POST uploaded file (incomplete)
 			          // Add a new option to continue treatment now, but this option is how to deal with the follow-up
 			          // For example, a reference window OOO did not do
 
-			goto tosend;
+			//goto tosend;
+			break; /* do not send segment if a previos one is lost */
         	}
 
 		tosend:
@@ -1024,9 +1028,8 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 			 * Receiver: Sends ACK and transits to TIME WAIT
 			 */
 			if ( peer == destination && ( segment->flags & TH_FIN ) )
-			{
 				peer->status = NTOH_STATUS_TIMEWAIT;
-			}else if ( peer == origin )
+			else if ( peer == origin )
 			{
 				if ( segment->flags & TH_ACK )
 				{
@@ -1091,7 +1094,11 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 		if (stream->enable_check_nowindow) // @contrib: di3online - https://github.com/di3online
 		{
 			/* if we have no space */
-			while ( origin->totalwin < payload_len && send_peer_segments ( session , stream , origin , destination , ack , 1 , NTOH_REASON_NOWINDOW, who ) > 0 );
+			while ( origin->totalwin < payload_len &&
+				send_peer_segments ( session , stream , origin , 
+							destination , ack , 1 , 
+							NTOH_REASON_NOWINDOW, who ) > 0 
+			);
 
 			/* we're in trouble */
 			if ( origin->totalwin < payload_len )
@@ -1290,4 +1297,71 @@ exitp:
 		unlock_access ( &stream->lock );
 
 	return ret;
+}
+
+
+/* @brief resizes the hash table of a given TCP session */
+int ntoh_tcp_resize_session ( pntoh_tcp_session_t session , unsigned short table , size_t newsize )
+{
+	ptcprs_streams_table_t	newht = 0 , curht = 0;
+	pntoh_tcp_stream_t	item = 0;
+	int			current = 0;
+
+	if ( !session )
+		return NTOH_INCORRECT_SESSION;
+
+
+	if ( ! newsize || newsize == session->streams->table_size )
+		return NTOH_OK;
+
+	switch ( table )
+	{
+		case NTOH_RESIZE_STREAMS:
+			curht = session->streams;
+			break;
+
+		case NTOH_RESIZE_TIMEWAIT:
+			curht = session->timewait;
+			break;
+
+		default:
+			return NTOH_ERROR_PARAMS;
+	}
+
+	lock_access ( &session->lock );
+	// increase the size
+	if ( newsize > curht->table_size )
+		newht = htable_map ( newsize );
+	// decrease the size
+	else
+	{
+		sem_getvalue ( &session->max_streams , &current );
+		if ( newsize < current )
+		{
+			unlock_access ( &session->lock );
+			return NTOH_ERROR_NOSPACE;
+		}
+	}
+
+	// moves all the streams to the new sessions table
+	while ( ( current = htable_first ( curht ) ) != 0 )
+	{
+		item = (pntoh_tcp_stream_t) htable_remove ( curht , current , 0 );
+		htable_insert ( newht , current , item );
+	}
+	htable_destroy ( &curht );
+
+
+	if ( table == NTOH_RESIZE_TIMEWAIT )
+	{
+		sem_init ( &session->max_timewait , 0 , newsize );
+		session->streams = newht;
+	}else{
+		sem_init ( &session->max_streams , 0 , newsize );
+		session->timewait = newht;
+	}
+
+	unlock_access ( &session->lock );
+
+	return NTOH_OK;
 }

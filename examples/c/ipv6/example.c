@@ -60,9 +60,9 @@
 #define RECV_SERVER	2
 
 /* capture handle */
-pcap_t					*handle = 0;
+pcap_t			*handle = 0;
 pntoh_ipv6_session_t	ipv6_session = 0;
-unsigned short			receive = 0;
+unsigned short		receive = 0;
 
 /**
  * @brief Exit function (closes the capture handle and releases all resource from libntoh)
@@ -143,8 +143,8 @@ void ipv6_callback ( pntoh_ipv6_flow_t flow , pntoh_ipv6_tuple4_t tuple , unsign
 {
 	unsigned int i = 0;
 
-	fprintf( stderr, "\n\n[i] Got an IPv6 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , inet_ntoa( *(struct in_addr*) &tuple->source ) );
-	fprintf( stderr, "%s | %i/%i bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+	fprintf( stderr, "\n\n[i] Got an IPv6 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , inet_ntoa( * (struct in_addr*) &tuple->source ) );
+	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	for ( i = 0; i < flow->total ; i++ )
 		fprintf( stderr, "%02x ", data[i] );
@@ -182,7 +182,6 @@ int main ( int argc , char *argv[] )
 	fprintf( stderr, "\n# ----------------------- #" );
 	fprintf( stderr, "\n#  http://safetybits.net  #" );
 	fprintf( stderr, "\n#   chema@safetybits.net  #" );
-	fprintf( stderr, "\n#   sch3m4@brutalsec.net  #" );
 	fprintf( stderr, "\n###########################\n" );
 
 	fprintf( stderr, "\n[i] libntoh version: %s\n", ntoh_version() );

@@ -287,14 +287,14 @@ void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flo
 
 int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t flow , struct ip *iphdr )
 {
-	size_t iphdr_len = 0;
-	size_t len = 0;
-	unsigned short offset = 0;
-	unsigned short flags = 0;
-	unsigned int data_len = 0;
-	unsigned char *data = 0;
-	int				ret = NTOH_OK;
-	pntoh_ipv4_fragment_t frag = 0;
+	size_t			iphdr_len = 0;
+	size_t			len = 0;
+	unsigned short		offset = 0;
+	unsigned short		flags = 0;
+	unsigned int		data_len = 0;
+	unsigned char		*data = 0;
+	int			ret = NTOH_OK;
+	pntoh_ipv4_fragment_t	frag = 0;
 
 	if ( !params.init )
 		return NTOH_NOT_INITIALIZED;

@@ -34,7 +34,7 @@
 
 // Uniqueness test for IP fragments, using their tuples
 // @contrib: Eosis - https://github.com/Eosis
-_HIDDEN inline int ip_tuple4_equals_to(ntoh_ipv4_tuple4_t* x, ntoh_ipv4_tuple4_t* y)
+_HIDDEN inline int ip_tuple4_equals_to(pntoh_ipv4_tuple4_t x, pntoh_ipv4_tuple4_t y)
 {
 	if (x->source != y->source)
 		return 0;
@@ -116,7 +116,7 @@ _HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 
 	// @contrib: Eosis - https://github.com/Eosis
 	if ( ip_tuple4 != 0 ) //if not null
-		while( node != 0 && !(ip_tuple4_equals_to((ntoh_ipv4_tuple4_t*)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->val))->ident))) )
+		while( node != 0 && !(ip_tuple4_equals_to((pntoh_ipv4_tuple4_t)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->val))->ident))) )
 			node = node->next;
 	else
 		while ( node != 0 && node->key != key )

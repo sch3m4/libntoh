@@ -45,11 +45,11 @@
 typedef struct
 {
 	/// source IP address
-	uint8_t		source[16];
+	unsigned char	source[16];
 	/// destination IP address
-	uint8_t		destination[16];
+	unsigned char	destination[16];
 	/// Transport layer protocol
-	uint8_t		protocol;
+	unsigned char	protocol;
 	/// Identification
 	unsigned int	id;
 } ntoh_ipv6_tuple4_t, *pntoh_ipv6_tuple4_t;

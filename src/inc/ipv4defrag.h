@@ -46,7 +46,6 @@ typedef struct
 	/// destination IP address
 	unsigned int	destination;
 	/// Transport layer protocol
-	//uint8_t protocol;
 	unsigned char	protocol;
 	/// Identification
 	unsigned short	id;

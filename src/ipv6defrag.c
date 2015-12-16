@@ -107,8 +107,7 @@ unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tup
 	memcpy ( (void*)tuple->destination , (void*)&(ip->ip6_dst) , sizeof ( tuple->destination) );
 
 	frag = (struct ip6_frag*)((unsigned char*)ip + sizeof ( struct ip6_hdr));
-//	tuple->id = frag->ip6f_ident;  // we dont care byte order (no ntoX needed)
-	tuple->id = ip->ip6_flow; /* not tested yet */
+	tuple->id = frag->ip6f_ident;  // we dont care byte order (no ntoX needed)
 	tuple->protocol = frag->ip6f_nxt;
 
 	return NTOH_OK;

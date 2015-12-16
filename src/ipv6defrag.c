@@ -43,13 +43,13 @@ static ntoh_ipv6_params_t params = { 0 , 0 };
 #define NTOH_GET_IPV6_MORE_FRAGMENTS(offset)    ntohs(offset&IP6F_MORE_FRAG)
 #define IS_SET(a,b)				(a & b)
 
-inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
+inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_tuple4_t tuple4 )
 {
 	unsigned char   tmp[50] = {0};
 	ntoh_ipv6_key_t ret = 0;
 	uint32_t         i;
 
-	if ( !tuple4 || !session )
+	if ( !tuple4 )
 		return ret;
 
 	for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
@@ -107,7 +107,8 @@ unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tup
 	memcpy ( (void*)tuple->destination , (void*)&(ip->ip6_dst) , sizeof ( tuple->destination) );
 
 	frag = (struct ip6_frag*)((unsigned char*)ip + sizeof ( struct ip6_hdr));
-	tuple->id = frag->ip6f_ident;  // we doesnt care byte order (no ntoX needed)
+//	tuple->id = frag->ip6f_ident;  // we dont care byte order (no ntoX needed)
+	tuple->id = ip->ip6_flow; /* not tested yet */
 	tuple->protocol = frag->ip6f_nxt;
 
 	return NTOH_OK;
@@ -121,7 +122,7 @@ pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv
 	if ( !params.init || !session || !tuple4 )
 		return ret;
 
-	key = ip_get_hashkey( session , tuple4 );
+	key = ip_get_hashkey( tuple4 );
 
 	lock_access( &session->lock );
 	ret = htable_find ( session->flows , key, tuple4);
@@ -164,7 +165,7 @@ pntoh_ipv6_flow_t ntoh_ipv6_new_flow ( pntoh_ipv6_session_t session , pntoh_ipv6
 		return ret;
 
 	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv6_tuple4_t) );
-	ret->key = ip_get_hashkey( session , tuple4 );
+	ret->key = ip_get_hashkey( tuple4 );
 
 	gettimeofday( &ret->last_activ, 0 );
 	ret->function = (void*) function;

@@ -41,11 +41,12 @@ static ntoh_ipv4_params_t params = { 0 , 0 };
 #define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
 #define IS_SET(a,b)				(a & b)
 
-inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
+inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_tuple4_t tuple4 )
 {
 	ntoh_ipv4_key_t ret = 0;
 	unsigned int hold = 0;
-	if ( !tuple4 || !session )
+
+	if ( !tuple4 )
 		return ret;
 
 	// @contrib: Eosis - https://github.com/Eosis
@@ -95,7 +96,7 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
 	if ( !params.init || !session || !tuple4 )
 		return ret;
 
-	key = ip_get_hashkey( session , tuple4 );
+	key = ip_get_hashkey( tuple4 );
 
 	lock_access( &session->lock );
 	ret = htable_find ( session->flows , key, tuple4);
@@ -138,7 +139,7 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 		return ret;
 
 	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv4_tuple4_t) );
-	ret->key = ip_get_hashkey( session , tuple4 );
+	ret->key = ip_get_hashkey( tuple4 );
 
 	gettimeofday( &ret->last_activ, 0 );
 	ret->function = (void*) function;

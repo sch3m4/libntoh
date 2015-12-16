@@ -192,9 +192,9 @@ int main ( int argc , char *argv[] )
 		fprintf( stderr, "\n+ Options:" );
 		fprintf( stderr, "\n\t-i | --iface <val> -----> Interface to read packets from" );
 		fprintf( stderr, "\n\t-f | --file <val> ------> File path to read packets from" );
-		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (must contain \"tcp\" or \"ip\")" );
-		fprintf( stderr, "\n\t-c | --client ----------> Receive client data only");
-		fprintf( stderr, "\n\t-s | --server ----------> Receive server data only\n\n");
+		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (should include \"ipv6\")" );
+		fprintf( stderr, "\n\t-c | --client ----------> Receive client data");
+		fprintf( stderr, "\n\t-s | --server ----------> Receive server data\n\n");
 		exit( 1 );
 	}
 

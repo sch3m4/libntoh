@@ -1,3 +1,4 @@
 .cproject
 .project
 src/build
+examples/c/*/build

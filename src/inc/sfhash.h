@@ -9,6 +9,6 @@
  *
  */
 
-unsigned int sfhash_3words(unsigned int a, unsigned int b, unsigned int c, unsigned int initval);
+unsigned int sfhash(const void * key, unsigned int len, unsigned int initval);
 
 #endif

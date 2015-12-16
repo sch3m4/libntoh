@@ -66,12 +66,16 @@ const char *ntoh_tcp_get_status ( unsigned int status )
 /** @brief Returns the key for the stream identified by 'data' **/
 inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t data )
 {
-	if ( !data )
+	unsigned int val[3] = {0};
+
+	if ( !data || !session )
 		return 0;
 
-	return sfhash_3words ( data->source, (data->destination ^ data->protocol) ,
-				(data->sport | (data->dport << 16)),
-				session->rand);
+	val[0] = data->source;
+	val[1] = data->destination ^ data->protocol;
+	val[2] = data->sport | (data->dport << 16);
+
+	return sfhash ( val , sizeof ( val ) , session->rand );
 /*
 	return (
 			( ( ( data->sport | (data->protocol & 0x0F) ) & 0xFF ) |

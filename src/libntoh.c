@@ -141,12 +141,16 @@ void ntoh_init ( void )
 {
 	ntoh_tcp_init();
 	ntoh_ipv4_init();
+	ntoh_ipv6_init();
+
+	return;
 }
 
 void ntoh_exit ( void )
 {
 	ntoh_tcp_exit();
 	ntoh_ipv4_exit();
+	ntoh_ipv6_exit();
 
 	return;
 }

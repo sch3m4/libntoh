@@ -375,6 +375,17 @@ unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tc
 	return NTOH_OK;
 }
 
+unsigned short tcp_equal_tuple ( void *a , void *b )
+{
+	unsigned short ret = 0;
+
+        if ( ! memcmp ( a , (void*)&((pntoh_tcp_stream_t)b)->tuple , sizeof ( ntoh_tcp_tuple5_t ) ) )
+                ret++;
+
+	return ret;
+}
+
+
 /** @brief API to get the size of the sessions table (max allowed streams) **/
 unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
 {
@@ -410,8 +421,8 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 
 	ntoh_tcp_init();
 
-	session->streams = htable_map ( max_streams );
-	session->timewait = htable_map ( max_timewait );
+	session->streams = htable_map ( max_streams , &tcp_equal_tuple );
+	session->timewait = htable_map ( max_timewait , &tcp_equal_tuple );
 
 	sem_init ( &session->max_streams , 0 , max_streams );
 	sem_init ( &session->max_timewait , 0 , max_timewait );
@@ -1335,7 +1346,7 @@ int ntoh_tcp_resize_session ( pntoh_tcp_session_t session , unsigned short table
 	lock_access ( &session->lock );
 	// increase the size
 	if ( newsize > curht->table_size )
-		newht = htable_map ( newsize );
+		newht = htable_map ( newsize , &tcp_equal_tuple );
 	// decrease the size
 	else
 	{

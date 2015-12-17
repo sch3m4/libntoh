@@ -34,7 +34,7 @@
 
 // Uniqueness test for IP fragments, using their tuples
 // @contrib: Eosis - https://github.com/Eosis
-_HIDDEN inline int ip_tuple4_equals_to(pntoh_ipv4_tuple4_t x, pntoh_ipv4_tuple4_t y)
+_HIDDEN inline int ipv4_tuple4_equals_to(pntoh_ipv4_tuple4_t x, pntoh_ipv4_tuple4_t y)
 {
 	if (x->source != y->source)
 		return 0;
@@ -55,7 +55,7 @@ _HIDDEN inline int ip_tuple4_equals_to(pntoh_ipv4_tuple4_t x, pntoh_ipv4_tuple4_
 /** HASH TABLE **/
 /****************/
 /* map the hash table */
-_HIDDEN phtable_t htable_map ( size_t size )
+_HIDDEN phtable_t htable_map ( size_t size , fcmp_t *equal_func )
 {
 	phtable_t ret = 0;
 
@@ -65,6 +65,7 @@ _HIDDEN phtable_t htable_map ( size_t size )
 	ret = (phtable_t) calloc ( 1 , sizeof ( htable_t ) );
 	ret->table = (phtnode_t*) calloc ( size , sizeof ( phtnode_t ) );
 	ret->table_size = size;
+	ret->equals = equal_func;
 
 	return ret;
 }
@@ -116,7 +117,7 @@ _HIDDEN void *htable_find ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 
 	// @contrib: Eosis - https://github.com/Eosis
 	if ( ip_tuple4 != 0 ) //if not null
-		while( node != 0 && !(ip_tuple4_equals_to((pntoh_ipv4_tuple4_t)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->val))->ident))) )
+		while( node != 0 && ht->equals ( ip_tuple4 , node->val ) ) //!(ipv4_tuple4_equals_to((pntoh_ipv4_tuple4_t)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->val))->ident))) )
 			node = node->next;
 	else
 		while ( node != 0 && node->key != key )
@@ -149,9 +150,12 @@ _HIDDEN void *htable_remove ( phtable_t ht , unsigned int key, void* ip_tuple4 )
 		while ( node->next != 0 && node->next->key != key )
 			node = node->next;
 
+		// ht->equal ( ip_tuple4 , node->next->val )
+		// en el metodo de creación de la tabla hash
+
 		// @contrib: Eosis - https://github.com/Eosis
-		if (ip_tuple4) //if not null
-			while( node->next != 0 && !(ip_tuple4_equals_to((pntoh_ipv4_tuple4_t)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->next->val))->ident))) )
+		if (ip_tuple4 != 0 ) //if not null
+			while( node->next != 0 && ht->equals ( ip_tuple4 , node->next->val ) ) //!(ipv4_tuple4_equals_to((pntoh_ipv4_tuple4_t)ip_tuple4, &(((pntoh_ipv4_flow_t)(node->next->val))->ident))) )
 				node = node->next;
 		else
 			while ( node->next != 0 && node->next->key != key )

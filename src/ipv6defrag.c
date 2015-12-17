@@ -113,6 +113,16 @@ unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tup
 	return NTOH_OK;
 }
 
+unsigned short ipv6_equal_tuple ( void *a , void *b )
+{
+	unsigned short ret = 0;
+
+        if ( ! memcmp ( a , (void*)&((pntoh_ipv6_flow_t)b)->ident , sizeof ( ntoh_ipv6_tuple4_t) ) )
+		ret++;
+
+	return ret;
+}
+
 pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
 	ntoh_ipv6_key_t key = 0;
@@ -506,7 +516,7 @@ pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-	session->flows = htable_map (max_flows );
+	session->flows = htable_map (max_flows , &ipv6_equal_tuple );
 	sem_init ( &session->max_flows , 0 , max_flows );
 	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );
@@ -610,7 +620,7 @@ int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t newsize )
 
         // increase the size
         if ( newsize > curht->table_size )
-                newht = htable_map ( newsize );
+                newht = htable_map ( newsize , &ipv6_equal_tuple );
         // decrease the size
         else
         {

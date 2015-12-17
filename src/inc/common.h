@@ -43,17 +43,20 @@ typedef struct _hash_node_
 	unsigned int		key;
 } htnode_t , *phtnode_t;
 
+typedef unsigned short fcmp_t (void *a, void *b);
+
 /* hash table definition */
 typedef struct
 {
 	size_t		table_size;
 	phtnode_t	*table;
+	fcmp_t		*equals;
 } htable_t , *phtable_t;
 
 /******************************************************************/
 /** Hash Table implementation (collision resolution by chaining) **/
 /******************************************************************/
-phtable_t htable_map ( size_t size );
+phtable_t htable_map ( size_t size , fcmp_t *equal_func );
 int htable_insert ( phtable_t ht  , unsigned int key , void *val );
 void *htable_find ( phtable_t ht , unsigned int key, void *ip_tuple4 );
 void *htable_remove ( phtable_t ht , unsigned int key, void *ip_tuple4 );

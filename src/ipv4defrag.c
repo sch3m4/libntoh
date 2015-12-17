@@ -88,6 +88,16 @@ unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple )
 	return NTOH_OK;
 }
 
+unsigned short ipv4_equal_tuple ( void *a , void *b )
+{
+	unsigned short ret = 0;
+
+	if ( ! memcmp ( a , (void*)&((pntoh_ipv4_flow_t)b)->ident , sizeof ( ntoh_ipv4_tuple4_t) ) )
+		ret++;
+
+	return ret;
+}
+
 pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
 	ntoh_ipv4_key_t key = 0;
@@ -495,7 +505,7 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-	session->flows = htable_map (max_flows );
+	session->flows = htable_map (max_flows , &ipv4_equal_tuple );
 	sem_init ( &session->max_flows , 0 , max_flows );
 	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );
@@ -599,7 +609,7 @@ int ntoh_ipv4_resize_session ( pntoh_ipv4_session_t session , size_t newsize )
 
         // increase the size
         if ( newsize > curht->table_size )
-                newht = htable_map ( newsize );
+                newht = htable_map ( newsize , &ipv4_equal_tuple );
         // decrease the size
         else
         {

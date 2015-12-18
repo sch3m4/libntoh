@@ -305,7 +305,7 @@ void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flo
 	return;
 }
 
-int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr , size_t len )
+int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr )
 {
 	size_t                  iphdr_len = 0;
 	unsigned short          offset = 0;
@@ -313,7 +313,8 @@ int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t fl
 	unsigned char           *data = 0;
 	int			ret = NTOH_OK;
 	pntoh_ipv6_fragment_t   frag = 0;
-	struct ip6_frag         *frhdr;
+	struct ip6_frag         *frhdr = 0;
+	size_t			len = 0;
 
 	if ( !params.init )
 		return NTOH_NOT_INITIALIZED;
@@ -328,13 +329,11 @@ int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t fl
 		return NTOH_INCORRECT_IP_HEADER;
 
 	/* too short length */
+	len = sizeof ( struct ip6_hdr ) + ntohs ( iphdr->ip6_plen );
 	if ( len <= sizeof(struct ip6_hdr) + sizeof ( struct ip6_frag ) )
 		return NTOH_INCORRECT_LENGTH;
 
 	iphdr_len = sizeof ( struct ip6_hdr );
-
-	if ( len < ntohs( iphdr->ip6_plen ) )
-		return NTOH_NOT_ENOUGH_DATA;
 
 	data_len = ntohs( iphdr->ip6_plen ) - sizeof ( struct ip6_frag );
 	data = (unsigned char*) iphdr + iphdr_len + sizeof ( struct ip6_frag );

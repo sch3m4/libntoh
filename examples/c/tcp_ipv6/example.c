@@ -70,7 +70,7 @@ typedef struct
 /* capture handle */
 pcap_t 			*handle = 0;
 pntoh_tcp_session_t	tcp_session = 0;
-pntoh_ipv4_session_t	ipv4_session = 0;
+pntoh_ipv6_session_t	ipv6_session = 0;
 unsigned short		receive = 0;
 
 /**
@@ -97,6 +97,11 @@ ppeer_info_t get_peer_info ( unsigned char *payload , size_t payload_len , pntoh
 	ppeer_info_t ret = 0;
 	size_t len = 0;
 	char path[1024] = {0};
+        char            src[INET6_ADDRSTRLEN] = {0};
+        char            dst[INET6_ADDRSTRLEN] = {0};
+
+        inet_ntop ( AF_INET6 , (void*) &tuple->source , src , INET6_ADDRSTRLEN ); 
+        inet_ntop ( AF_INET6 , (void*) &tuple->destination , dst , INET6_ADDRSTRLEN ); 
 
 	/* gets peer information */
 	ret = (ppeer_info_t) calloc ( 1 , sizeof ( peer_info_t ) );
@@ -104,9 +109,9 @@ ppeer_info_t get_peer_info ( unsigned char *payload , size_t payload_len , pntoh
 	ret->data = (unsigned char*) calloc ( ret->data_len , sizeof ( unsigned char ) );
 	memcpy ( ret->data , payload , ret->data_len );
 
-	snprintf ( path , sizeof(path) , "%s:%d-" , inet_ntoa ( *(struct in_addr*)&(tuple->source) ) , ntohs(tuple->sport) );
+	snprintf ( path , sizeof(path) , "%s:%d-" , src, ntohs(tuple->sport) );
 	len = strlen(path);
-	snprintf ( &path[len] , sizeof(path) - len, "%s:%d" , inet_ntoa ( *(struct in_addr*)&(tuple->destination) ) , ntohs(tuple->dport) );
+	snprintf ( &path[len] , sizeof(path) - len, "%s:%d" , dst , ntohs(tuple->dport) );
 
 	ret->path = strndup ( path , sizeof(path) );
 
@@ -184,7 +189,7 @@ void write_data ( ppeer_info_t info )
 /**
  * @brief Send a TCP segment to libntoh
  */
-void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
+void send_tcp_segment ( struct ip6_hdr *iphdr , pntoh_tcp_callback_t callback )
 {
 	ppeer_info_t		pinfo;
 	ntoh_tcp_tuple5_t	tcpt5;
@@ -198,30 +203,35 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 	int			ret;
 	unsigned int		error;
 
-	size_ip = iphdr->ip_hl * 4;
-	total_len = ntohs( iphdr->ip_len );
+	size_ip = sizeof ( struct ip6_hdr );
+	total_len = size_ip + ntohs( iphdr->ip6_plen );
 
 	tcp = (struct tcphdr*)((unsigned char*)iphdr + size_ip);
 	if ( (size_tcp = tcp->th_off * 4) < sizeof(struct tcphdr) )
 		return;
 
 	payload = (unsigned char *)iphdr + size_ip + size_tcp;
-	size_payload = total_len - ( size_ip + size_tcp );
+	size_payload = total_len - (size_ip + size_tcp);
 
 	ntoh_tcp_get_tuple5 ( (void*)iphdr , tcp , &tcpt5 );
 
 	/* find the stream or creates a new one */
 	if ( !( stream = ntoh_tcp_find_stream( tcp_session , &tcpt5 ) ) )
+	{
 		if ( ! ( stream = ntoh_tcp_new_stream( tcp_session , &tcpt5, callback , 0 , &error , 1 , 1 ) ) )
 		{
 			fprintf ( stderr , "\n[e] Error %d creating new stream: %s" , error , ntoh_get_errdesc ( error ) );
 			return;
 		}
 
+		fprintf ( stderr , "\nStream Creado!");
+	}
+
 	if ( size_payload > 0 )
 		pinfo = get_peer_info ( payload , size_payload , &tcpt5 );
 	else
 		pinfo = 0;
+
 
 	/* add this segment to the stream */
 	switch ( ( ret = ntoh_tcp_add_segment( tcp_session , stream, (void*)iphdr, total_len, (void*)pinfo ) ) )
@@ -243,26 +253,26 @@ void send_tcp_segment ( struct ip *iphdr , pntoh_tcp_callback_t callback )
 }
 
 /**
- * @brief Sends a IPv4 fragment to libntoh
+ * @brief Sends a IPv6 fragment to libntoh
  */
-void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
+void send_ipv6_fragment ( struct ip6_hdr *iphdr , pipv6_dfcallback_t callback )
 {
-	ntoh_ipv4_tuple4_t 	ipt4;
-	pntoh_ipv4_flow_t 	flow;
+	ntoh_ipv6_tuple4_t 	ipt4;
+	pntoh_ipv6_flow_t 	flow;
 	int 			ret;
 	unsigned int		error;
 
-	ntoh_ipv4_get_tuple4 ( iphdr , &ipt4 );
+	ntoh_ipv6_get_tuple4 ( iphdr , &ipt4 );
 
-	if ( !( flow = ntoh_ipv4_find_flow( ipv4_session , &ipt4 ) ) )
-		if ( ! (flow = ntoh_ipv4_new_flow( ipv4_session , &ipt4, callback, 0 , &error )) )
+	if ( !( flow = ntoh_ipv6_find_flow( ipv6_session , &ipt4 ) ) )
+		if ( ! (flow = ntoh_ipv6_new_flow( ipv6_session , &ipt4, callback, 0 , &error )) )
 		{
 			fprintf ( stderr , "\n[e] Error %d creating new IPv4 flow: %s" , error , ntoh_get_errdesc ( error ) );
 			return;
 		}
 
-	if ( ( ret = ntoh_ipv4_add_fragment( ipv4_session , flow, iphdr ) ) )
-		fprintf( stderr, "\n[e] Error %d adding IPv4: %s", ret, ntoh_get_retval_desc( ret ) );
+	if ( ( ret = ntoh_ipv6_add_fragment( ipv6_session , flow, iphdr ) ) )
+		fprintf( stderr, "\n[e] Error %d adding IPv6: %s", ret, ntoh_get_retval_desc( ret ) );
 
 	return;
 }
@@ -270,6 +280,12 @@ void send_ipv4_fragment ( struct ip *iphdr , pipv4_dfcallback_t callback )
 /* TCP Callback */
 void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tcp_peer_t dest , pntoh_tcp_segment_t seg , int reason , int extra )
 {
+        char            src[INET6_ADDRSTRLEN] = {0};
+        char            dst[INET6_ADDRSTRLEN] = {0};
+
+        inet_ntop ( AF_INET6 , (void*) &orig->addr , src , INET6_ADDRSTRLEN );
+        inet_ntop ( AF_INET6 , (void*) &dest->addr , dst , INET6_ADDRSTRLEN );
+
 	/* receive data only from the peer given by the user */
 	if ( receive == RECV_CLIENT && stream->server.receive )
 	{
@@ -281,8 +297,8 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 		return;
 	}
 
-	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %lu) ---> " , ntoh_tcp_get_status ( stream->status ) , inet_ntoa( *(struct in_addr*) &orig->addr ) , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
-	fprintf ( stderr , "%s:%d (%s | Window: %lu)\n\t" , inet_ntoa( *(struct in_addr*) &dest->addr ) , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
+	fprintf ( stderr , "\n[%s] %s:%d (%s | Window: %lu) ---> " , ntoh_tcp_get_status ( stream->status ) , src , ntohs(orig->port) , ntoh_tcp_get_status ( orig->status ) , orig->totalwin );
+	fprintf ( stderr , "%s:%d (%s | Window: %lu)\n\t" , dst , ntohs(dest->port) , ntoh_tcp_get_status ( dest->status ) , dest->totalwin );
 
 	if ( seg != 0 )
 		fprintf ( stderr , "SEQ: %lu ACK: %lu Next SEQ: %lu" , seg->seq , seg->ack , orig->next_seq );
@@ -297,8 +313,9 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
             case NTOH_REASON_EXIT:
             case NTOH_REASON_TIMEDOUT:
             case NTOH_REASON_CLOSED:
+		inet_ntop ( AF_INET6 , (void*) &stream->client.addr , src , INET6_ADDRSTRLEN );
                 if ( extra == NTOH_REASON_CLOSED )
-                    fprintf ( stderr , "\n\t+ Connection closed by %s (%s)" , stream->closedby == NTOH_CLOSEDBY_CLIENT ? "Client" : "Server" , inet_ntoa( *(struct in_addr*) &(stream->client.addr) ) );
+                    fprintf ( stderr , "\n\t+ Connection closed by %s (%s)" , stream->closedby == NTOH_CLOSEDBY_CLIENT ? "Client" : "Server" , src );
                 else
                     fprintf ( stderr , "\n\t+ %s/%s - %s" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) , ntoh_tcp_get_status ( stream->status ) );
 
@@ -328,16 +345,21 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 	return;
 }
 
-/* IPv4 Callback */
-void ipv4_callback ( pntoh_ipv4_flow_t flow , pntoh_ipv4_tuple4_t tuple , unsigned char *data , size_t len , unsigned short reason )
+/* IPv6 Callback */
+void ipv6_callback ( pntoh_ipv6_flow_t flow , pntoh_ipv6_tuple4_t tuple , unsigned char *data , size_t len , unsigned short reason )
 {
-	unsigned int i = 0;
+	unsigned int	i = 0;
+        char            src[INET6_ADDRSTRLEN] = {0};
+        char            dst[INET6_ADDRSTRLEN] = {0};
 
-	fprintf( stderr, "\n\n[i] Got an IPv4 datagram! (%s) %s --> ", ntoh_get_reason(reason) , inet_ntoa( *(struct in_addr*) &tuple->source ) );
-	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+        inet_ntop ( AF_INET6 , (void*) &tuple->source , src , INET6_ADDRSTRLEN );
+        inet_ntop ( AF_INET6 , (void*) &tuple->destination , dst , INET6_ADDRSTRLEN );
+
+	fprintf( stderr, "\n\n[i] Got an IPv4 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , src );
+	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", dst , len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	if ( tuple->protocol == IPPROTO_TCP )
-		send_tcp_segment ( (struct ip*) data , &tcp_callback );
+		send_tcp_segment ( (struct ip6_hdr*) data , &tcp_callback );
 	else
 		for ( i = 0; i < flow->total ; i++ )
 			fprintf( stderr, "%02x ", data[i] );
@@ -355,14 +377,14 @@ int main ( int argc , char *argv[] )
 	/* pcap */
 	char 			errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program 	fp;
-	char 			filter_exp[] = "ip and tcp";
+	char 			filter_exp[] = "ip6 and tcp";
 	char 			*source = 0;
 	char 			*filter = filter_exp;
 	const unsigned char	*packet = 0;
 	struct pcap_pkthdr 	header;
 
 	/* packet dissection */
-	struct ip	*ip;
+	struct ip6_hdr	*ip;
 	unsigned int	error;
 
 	/* extra */
@@ -385,7 +407,7 @@ int main ( int argc , char *argv[] )
 		fprintf( stderr, "\n+ Options:" );
 		fprintf( stderr, "\n\t-i | --iface <val> -----> Interface to read packets from" );
 		fprintf( stderr, "\n\t-f | --file <val> ------> File path to read packets from" );
-		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (default: \"ip and tcp\")" );
+		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (default: \"ip6 and tcp\")" );
 		fprintf( stderr, "\n\t-c | --client ----------> Receive client data");
 		fprintf( stderr, "\n\t-s | --server ----------> Receive server data\n\n");
 		exit( 1 );
@@ -497,38 +519,36 @@ int main ( int argc , char *argv[] )
 
 	fprintf ( stderr , "\n[i] Max. TCP streams allowed: %d" , ntoh_tcp_get_size ( tcp_session ) );
 
-	if ( ! (ipv4_session = ntoh_ipv4_new_session ( 0 , 0 , &error )) )
+	if ( ! (ipv6_session = ntoh_ipv6_new_session ( 0 , 0 , &error )) )
 	{
 		ntoh_tcp_free_session ( tcp_session );
 		fprintf ( stderr , "\n[e] Error %d creating IPv4 session: %s" , error , ntoh_get_errdesc ( error ) );
 		exit ( -6 );
 	}
 
-	fprintf ( stderr , "\n[i] Max. IPv4 flows allowed: %d\n\n" , ntoh_ipv4_get_size ( ipv4_session ) );
+	fprintf ( stderr , "\n[i] Max. IPv6 flows allowed: %d\n\n" , ntoh_ipv6_get_size ( ipv6_session ) );
 
 	/* capture starts */
 	while ( ( packet = pcap_next( handle, &header ) ) != 0 )
 	{
 		/* get packet headers */
-		ip = (struct ip*) ( packet + sizeof ( struct ether_header ) );
-		if ( (ip->ip_hl * 4 ) < sizeof(struct ip) )
-			continue;
+		ip = (struct ip6_hdr*) ( packet + sizeof ( struct ether_header ) );
 
 		/* it is an IPv4 fragment */
-		if ( NTOH_IPV4_IS_FRAGMENT(ip->ip_off) )
-			send_ipv4_fragment ( ip , &ipv4_callback );
+		if ( NTOH_IPV6_IS_FRAGMENT(ip) )
+			send_ipv6_fragment ( ip , &ipv6_callback );
 		/* or a TCP segment */
-		else if ( ip->ip_p == IPPROTO_TCP )
+		else if ( ip->ip6_nxt == IPPROTO_TCP )
 			send_tcp_segment ( ip , &tcp_callback );
 	}
 
 	tcps = ntoh_tcp_count_streams( tcp_session );
-	ipf = ntoh_ipv4_count_flows ( ipv4_session );
+	ipf = ntoh_ipv6_count_flows ( ipv6_session );
 
 	/* no streams left */
 	if ( ipf + tcps > 0 )
 	{
-		fprintf( stderr, "\n\n[+] There are currently %i stored TCP stream(s) and %i IPv4 flow(s). You can wait them to get closed or press CTRL+C\n" , tcps , ipf );
+		fprintf( stderr, "\n\n[+] There are currently %i stored TCP stream(s) and %i IPv6 flow(s). You can wait them to get closed or press CTRL+C\n" , tcps , ipf );
 		pause();
 	}
 

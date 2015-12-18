@@ -117,11 +117,8 @@ void send_ipv6_fragment ( struct ip6_hdr *iphdr , pipv6_dfcallback_t callback )
 {
 	ntoh_ipv6_tuple4_t 	ipt4;
 	pntoh_ipv6_flow_t 	flow;
-	size_t			total_len;
 	int 			ret;
 	unsigned int		error;
-
-	total_len = ntohs( iphdr->ip6_plen );
 
 	ntoh_ipv6_get_tuple4 ( iphdr , &ipt4 );
 
@@ -132,7 +129,7 @@ void send_ipv6_fragment ( struct ip6_hdr *iphdr , pipv6_dfcallback_t callback )
 			return;
 		}
 
-	if ( ( ret = ntoh_ipv6_add_fragment( ipv6_session , flow, iphdr, total_len ) ) != NTOH_OK )
+	if ( ( ret = ntoh_ipv6_add_fragment( ipv6_session , flow, iphdr ) ) != NTOH_OK )
 		fprintf( stderr, "\n[e] Error %d adding IPv6: %s", ret, ntoh_get_retval_desc( ret ) );
 
 	return;
@@ -141,10 +138,15 @@ void send_ipv6_fragment ( struct ip6_hdr *iphdr , pipv6_dfcallback_t callback )
 /* IPv6 Callback */
 void ipv6_callback ( pntoh_ipv6_flow_t flow , pntoh_ipv6_tuple4_t tuple , unsigned char *data , size_t len , unsigned short reason )
 {
-	unsigned int i = 0;
+	unsigned int	i = 0;
+	char		src[INET6_ADDRSTRLEN] = {0};
+	char		dst[INET6_ADDRSTRLEN] = {0};
 
-	fprintf( stderr, "\n\n[i] Got an IPv6 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , inet_ntoa( * (struct in_addr*) &tuple->source ) );
-	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+	inet_ntop ( AF_INET6 , (void*) &tuple->source , src , INET6_ADDRSTRLEN );
+	inet_ntop ( AF_INET6 , (void*) &tuple->destination , src , INET6_ADDRSTRLEN );
+
+	fprintf( stderr, "\n\n[i] Got an IPv6 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , src );
+	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", dst , len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	for ( i = 0; i < flow->total ; i++ )
 		fprintf( stderr, "%02x ", data[i] );
@@ -192,7 +194,7 @@ int main ( int argc , char *argv[] )
 		fprintf( stderr, "\n+ Options:" );
 		fprintf( stderr, "\n\t-i | --iface <val> -----> Interface to read packets from" );
 		fprintf( stderr, "\n\t-f | --file <val> ------> File path to read packets from" );
-		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (should include \"ipv6\")" );
+		fprintf( stderr, "\n\t-F | --filter <val> ----> Capture filter (default \"ipv6\")" );
 		fprintf( stderr, "\n\t-c | --client ----------> Receive client data");
 		fprintf( stderr, "\n\t-s | --server ----------> Receive server data\n\n");
 		exit( 1 );

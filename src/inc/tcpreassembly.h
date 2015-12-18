@@ -41,6 +41,14 @@
 
 #include "sfhash.h"
 
+#ifndef IP6_ADDR_LEN
+# define IP6_ADDR_LEN	16
+#endif
+
+#ifndef IP4_ADDR_LEN
+# define IP4_ADDR_LEN	4
+#endif
+
 /** @brief connection status **/
 enum _ntoh_tcp_status_
 {
@@ -85,13 +93,9 @@ enum tcprs_who_sent
 enum check_timeout
 {
     NTOH_CHECK_TCP_SYNSENT_TIMEOUT = (1 << 0),
-    
     NTOH_CHECK_TCP_SYNRCV_TIMEOUT = (1 << 1),
-
     NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT = (1 << 2),
-
     NTOH_CHECK_TCP_FINWAIT2_TIMEOUT = (1 << 3),
-
     NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT = (1 << 4),
 };
 
@@ -102,14 +106,14 @@ typedef unsigned int ntoh_tcp_key_t;
 typedef struct
 {
 	///source address
-	unsigned int 	source;
+	unsigned int 	source[IP6_ADDR_LEN];
 	///destination address
-	unsigned int 	destination;
+	unsigned int 	destination[IP6_ADDR_LEN];
 	///source port
 	unsigned short 	sport;
 	///destination port
 	unsigned short 	dport;
-	///protocol
+	///IP protocol version 4/6
 	unsigned short 	protocol;
 } ntoh_tcp_tuple5_t, *pntoh_tcp_tuple5_t;
 
@@ -137,7 +141,7 @@ typedef struct _tcp_segment_
 typedef struct
 {
 	///IP address
-	unsigned int 		addr;
+	unsigned int 		addr[IP6_ADDR_LEN];
 	///connection port
 	unsigned short 		port;
 	///initial SEQ. number
@@ -350,12 +354,12 @@ unsigned int ntoh_tcp_count_streams ( pntoh_tcp_session_t session );
  * @brief Adds a new segment to a given stream
  * @param session TCP Session
  * @param stream Pointer to the stream
- * @param ip_hdr IP Header
+ * @param ip_hdr IPv4/6 Header
  * @param len Total length of this segment
  * @param udata Used data associated with this segment
  * @return NTOH_OK on success or the corresponding error code
  */
-int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct ip *ip , size_t len , void *udata );
+int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , void *ip , size_t len , void *udata );
 
 /**
  * @brief Get the status string of a stream/peer
@@ -373,12 +377,12 @@ unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session );
 
 /**
  * @brief Gets the tuple5 of a TCP/IPv4 stream
- * @param ip Pointer to the IPv4 header
+ * @param ip Pointer to the IPv4/6 header
  * @param tcp Pointer to the TCP header
  * @param tuple Pointer to the output tuple5 struct
  * @return NTOH_OK on success or the corresponding error code
  */
-unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple );
+unsigned int ntoh_tcp_get_tuple5 ( void *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple );
 
 /**
  * @brief Resizes the hash tables (streams | timewait) of a given TCP session

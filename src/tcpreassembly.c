@@ -66,16 +66,22 @@ const char *ntoh_tcp_get_status ( unsigned int status )
 /** @brief Returns the key for the stream identified by 'data' **/
 inline static ntoh_tcp_key_t tcp_getkey ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t data )
 {
-	unsigned int val[3] = {0};
+	#define ARRAY_SIZE	(IP6_ADDR_LEN*2)+2
+	unsigned int	val[ARRAY_SIZE] = {0};
+	size_t		len = ARRAY_SIZE;
 
 	if ( !data || !session )
 		return 0;
 
-	val[0] = data->source;
-	val[1] = data->destination ^ data->protocol;
-	val[2] = data->sport | (data->dport << 16);
+	if ( data->protocol != IPPROTO_IPV6 )
+		len -= (IP6_ADDR_LEN - IP4_ADDR_LEN) * 2;
 
-	return sfhash ( val , sizeof ( val ) , session->rand );
+	memcpy ( (void*) val , (void*)data->source , len );
+	val[len] = data->protocol;
+	memcpy ( (void*) &val[len] , (void*)data->destination , IP6_ADDR_LEN );
+	val[(len*2)+1] = data->sport | (data->dport << 16);
+
+	return sfhash ( val , len , session->rand );
 /*
 	return (
 			( ( ( data->sport | (data->protocol & 0x0F) ) & 0xFF ) |
@@ -361,15 +367,37 @@ static void *timeouts_thread ( void *p )
 }
 
 /** @brief API to get a tuple5 **/
-unsigned int ntoh_tcp_get_tuple5 ( struct ip *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple )
+unsigned int ntoh_tcp_get_tuple5 ( void *ip , struct tcphdr *tcp , pntoh_tcp_tuple5_t tuple )
 {
+	struct ip6_hdr	*ip6hdr = (struct ip6_hdr*)ip;
+	struct ip	*ip4hdr = (struct ip*)ip;
+
 	if ( !ip || !tcp || !tuple )
 		return NTOH_ERROR_PARAMS;
 
-	tuple->protocol = (unsigned char)(ip->ip_p);
-	tuple->source = ip->ip_src.s_addr;
+	switch ( ip4hdr->ip_v )
+	{
+		case 4:
+			memset ( (void*)tuple->source , 0 , sizeof(tuple->source) );
+			memset ( (void*)tuple->destination , 0 , sizeof ( tuple->destination ) );
+			/* pointer already set */
+			// ip4hdr = (struct ip*)ip;
+			tuple->protocol = 4;
+			tuple->source[0] = ip4hdr->ip_src.s_addr;
+			tuple->destination[0] = ip4hdr->ip_dst.s_addr;
+			break;
+
+		case 6:
+			tuple->protocol = 6;
+			memcpy ( (void*)tuple->source , (void*)&(ip6hdr->ip6_src) , sizeof ( tuple->source) );
+			memcpy ( (void*)tuple->destination , (void*)&(ip6hdr->ip6_dst) , sizeof ( tuple->destination) );
+			break;
+
+		default:
+                	return NTOH_INCORRECT_IP_HEADER;
+	}
+
 	tuple->sport = tcp->th_sport;
-	tuple->destination = ip->ip_dst.s_addr;
 	tuple->dport = tcp->th_dport;
 
 	return NTOH_OK;
@@ -523,8 +551,9 @@ void ntoh_tcp_init ( void )
 pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tcp_tuple5_t tuple5 )
 {
 	ntoh_tcp_key_t		key = 0;
-	ntoh_tcp_tuple5_t	tuplerev = {0};
+	ntoh_tcp_tuple5_t	tuplerev = {{0},{0},0};
 	pntoh_tcp_stream_t	ret = 0;
+	unsigned int		i;
 
 	if ( !session || !tuple5 )
 		return ret;
@@ -535,8 +564,12 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key , 0) ) )
 	{
-		tuplerev.destination = tuple5->source;
-		tuplerev.source = tuple5->destination;
+		for ( i = 0 ; i < IP6_ADDR_LEN ; i++ )
+		{
+			tuplerev.destination[i] = tuple5->source[i];
+			tuplerev.source[i] = tuple5->destination[i];
+		}
+
 		tuplerev.sport = tuple5->dport;
 		tuplerev.dport = tuple5->sport;
 		tuplerev.protocol = tuple5->protocol;
@@ -556,6 +589,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 {
 	pntoh_tcp_stream_t	stream = 0;
 	ntoh_tcp_key_t		key = 0;
+	unsigned int		i;
 
 	if ( error != 0 )
 		*error = 0;
@@ -581,7 +615,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 		return 0;
 	}
 
-	if ( !tuple5->destination || !tuple5->dport || !tuple5->source || !tuple5->sport )
+	if ( !tuple5->dport || !tuple5->sport || !tuple5->protocol )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_INVALID_TUPLE5;
@@ -607,11 +641,16 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 		return 0;
 	}
 
-	memcpy( &( stream->tuple ), tuple5, sizeof(ntoh_tcp_tuple5_t) );
+	memcpy( (void*)&( stream->tuple ), (void*)tuple5, sizeof(ntoh_tcp_tuple5_t) );
 	stream->key = key;
-	stream->client.addr = stream->tuple.source;
+
+	for ( i = 0 ; i < IP6_ADDR_LEN ; i++ )
+	{
+		stream->client.addr[i] = stream->tuple.source[i];
+		stream->server.addr[i] = stream->tuple.destination[i];
+	}
+
 	stream->client.port = stream->tuple.sport;
-	stream->server.addr = stream->tuple.destination;
 	stream->server.port = stream->tuple.dport;
 	stream->client.receive = 1;
 	stream->server.receive = 1;
@@ -1142,7 +1181,7 @@ inline static int handle_established_connection ( pntoh_tcp_session_t session , 
 }
 
 /** @brief API for add an incoming segment **/
-int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , struct ip *ip , size_t len , void *udata )
+int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stream , void *ip , size_t len , void *udata )
 {
 	size_t			iphdr_len = 0;
 	size_t			tcphdr_len = 0;
@@ -1153,7 +1192,11 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	unsigned int		tstamp = 0;
 	int			ret = NTOH_OK;
 	pntoh_tcp_segment_t	segment = 0;
+	struct ip		*ip4hdr = (struct ip*)ip;
+	struct ip6_hdr		*ip6hdr = (struct ip6_hdr*)ip;
 	int			who;// @contrib: di3online - https://github.com/di3online
+	unsigned int		saddr[IP6_ADDR_LEN] = {0};
+	unsigned int		daddr[IP6_ADDR_LEN] = {0};
 
 	if ( !stream || !session )
 		return NTOH_ERROR_PARAMS;
@@ -1162,26 +1205,51 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	if ( !ip ) // no ip header
 		return NTOH_INCORRECT_IP_HEADER;
 
-	if ( len <= sizeof(struct ip) ) // no data
+	if ( ip4hdr->ip_v != 4 && ip4hdr->ip_v != 6 )
+		return NTOH_INCORRECT_IP_HEADER;
+
+	if (
+		( ip4hdr->ip_v == 4 && len <= sizeof(struct ip) ) ||
+		( ip4hdr->ip_v == 6 && len <= sizeof(struct ip6_hdr) )
+
+	) // no data
 		return NTOH_INCORRECT_LENGTH;
 
-	if ( ( iphdr_len = 4 * ( ip->ip_hl ) ) < sizeof(struct ip) ) // incorrect ip header length
+	if (
+		( ip4hdr->ip_v == 4 && ( iphdr_len = 4 * ( ip4hdr->ip_hl ) ) < sizeof(struct ip) )
+	) // incorrect ip header length
 		return NTOH_INCORRECT_IP_HEADER_LENGTH;
 
-	if ( len < ntohs( ip->ip_len ) ) // incorrect capture length
+        if ( ip4hdr->ip_v == 6 )
+                iphdr_len = sizeof ( struct ip6_hdr );
+
+	if (
+		( ip4hdr->ip_v == 4 && len < ntohs( ip4hdr->ip_len ) ) ||
+		( ip4hdr->ip_v == 6 && len < ntohs( ip6hdr->ip6_plen ) )
+	 ) // incorrect capture length
 		return NTOH_NOT_ENOUGH_DATA;
 
-	if ( ip->ip_v != 4 ) // only handle IPv4
-		return NTOH_NOT_IPV4;
+	if ( ip4hdr->ip_v == 4 )
+	{
+		saddr[0] = ip4hdr->ip_src.s_addr;
+		daddr[0] = ip4hdr->ip_dst.s_addr;
+	}else{
+		memcpy ( (void*)saddr , (void*)&(ip6hdr->ip6_src) , IP6_ADDR_LEN );
+		memcpy ( (void*)daddr , (void*)&(ip6hdr->ip6_dst) , IP6_ADDR_LEN );
+	}
 
 	/* check IP addresses */
-	if ( !(
-			( stream->client.addr == ip->ip_src.s_addr && stream->server.addr == ip->ip_dst.s_addr ) ||
-			( stream->client.addr == ip->ip_dst.s_addr && stream->server.addr == ip->ip_src.s_addr )
-		))
+	if ( ! (
+		( !memcmp ( (void*)stream->client.addr , (void*)saddr , IP6_ADDR_LEN ) && !memcmp ( (void*)stream->server.addr , (void*)daddr , IP6_ADDR_LEN ) ) ||
+		( !memcmp ( (void*)stream->client.addr , (void*)daddr , IP6_ADDR_LEN ) && !memcmp ( (void*)stream->server.addr , (void*)saddr , IP6_ADDR_LEN ) )
+	) )
 		return NTOH_IP_ADDRESSES_MISMATCH;
+		
 
-	if ( ip->ip_p != IPPROTO_TCP )
+	if (
+		( ip4hdr->ip_v == 4 && ip4hdr->ip_p != IPPROTO_TCP ) ||
+		( ip4hdr->ip_v == 6 && ip6hdr->ip6_nxt != IPPROTO_TCP )
+	)
 		return NTOH_NOT_TCP;
 
 	tcp = (struct tcphdr*) ( (unsigned char*)ip + iphdr_len );
@@ -1202,10 +1270,13 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	))
 		return NTOH_TCP_PORTS_MISMATCH;
 
-	payload_len = ntohs(ip->ip_len) - iphdr_len - tcphdr_len;
+	if ( ip4hdr->ip_v == 4 )
+		payload_len = ntohs(ip4hdr->ip_len) - iphdr_len - tcphdr_len;
+	else
+		payload_len = ntohs(ip6hdr->ip6_plen) - tcphdr_len;
 
 	/* get origin and destination */
-	if ( stream->tuple.source == ip->ip_src.s_addr && stream->tuple.sport == tcp->th_sport ) // @contrib: harjotgill - https://github.com/harjotgill
+	if ( !memcmp ( (void*)stream->tuple.source , (void*)saddr , IP6_ADDR_LEN ) && stream->tuple.sport == tcp->th_sport ) // @contrib: harjotgill - https://github.com/harjotgill
 	{
 		origin = &stream->client;
 		destination = &stream->server;

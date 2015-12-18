@@ -207,10 +207,9 @@ void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flo
  * @brief Adds a new IPv6 fragment to a given flow
  * @param flow Flow where the new fragment will be added
  * @param iphdr IPv6 Header of the fragment
- * @param len Length of the fragment (IPv6 header + payload)
  * @return NTOH_OK on success, or error code when it fails
  */
-int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr , size_t len );
+int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr );
 
 /**
  * @brief Returns the total count of flows stored in the global hash table

@@ -17,14 +17,14 @@ There is a mailing list for libntoh development issues: libntoh-dev@safetybits.n
 Getting the source
 ==================
 
-$ git clone git://github.com/sch3m4/libntoh.git
-Cloning into 'libntoh'...
-remote: Counting objects: 962, done.
-remote: Total 962 (delta 0), reused 0 (delta 0), pack-reused 962
-Receiving objects: 100% (962/962), 1.01 MiB | 121.00 KiB/s, done.
-Resolving deltas: 100% (483/483), done.
-Checking connectivity... hecho.
-$
+	$ git clone git://github.com/sch3m4/libntoh.git
+	Cloning into 'libntoh'...
+	remote: Counting objects: 962, done.
+	remote: Total 962 (delta 0), reused 0 (delta 0), pack-reused 962
+	Receiving objects: 100% (962/962), 1.01 MiB | 121.00 KiB/s, done.
+	Resolving deltas: 100% (483/483), done.
+	Checking connectivity... hecho.
+	$
 
 Dependencies
 ============

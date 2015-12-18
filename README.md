@@ -108,6 +108,7 @@ Libntoh Examples
 ======================================
 
 You can find a working source code example for each protocol supported in "examples" folder:
+
 	libntoh$ ls examples/ -R
 	examples/:
 	c
@@ -126,7 +127,6 @@ You can find a working source code example for each protocol supported in "examp
 	
 	examples/c/tcp_ipv6:
 	build.sh  CMakeLists.txt  example.c
-
 
 
 The default installation prefix for libntoh is "/usr/local", so if you plan to link against libntoh using pkg-config

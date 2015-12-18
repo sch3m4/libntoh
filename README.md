@@ -1,5 +1,4 @@
-Introduction
-============
+#### Introduction
 
 Q: What is libntoh?
 A: Libntoh aims to be an user-friendly library to provide a easy way to perform defragmentation and reassembly of network/transport/(more?) protocols.
@@ -10,12 +9,10 @@ A: It's true there are some libraries which aims to do the same things (like lib
 Q: Which protocols does libntoh support?
 A: Currently libntoh performs IPv4/IPv6 defragmentation and TCP reassembly over IPv4 and IPv6.
 
-Mailing List
-============
+#### Mailing List
 There is a mailing list for libntoh development issues: libntoh-dev@safetybits.net
 
-Getting the source
-==================
+#### Getting the source
 
 	$ git clone git://github.com/sch3m4/libntoh.git
 	Cloning into 'libntoh'...
@@ -26,8 +23,7 @@ Getting the source
 	Checking connectivity... hecho.
 	$
 
-Dependencies
-============
+#### Dependencies
 
 To successfully compile libntoh you only need gcc, make, cmake, pkg-config and libpthread-dev.
 
@@ -45,8 +41,7 @@ Note: pkg-config isn't really needed but it helps. (See "ntohexample" compilatio
 You need CMake to compile libntoh and ntohexample.
 
 
-Compilation instructions
-========================
+#### Compilation instructions
 
 	$ cd libntoh/src
 	../src$ ./build.sh
@@ -104,8 +99,7 @@ Compilation instructions
 For a more detailed description refer to
 	https://github.com/sch3m4/libntoh/wiki	
 
-Libntoh Examples
-======================================
+#### Libntoh Examples
 
 You can find a working source code example for each protocol supported in "examples" folder:
 
@@ -143,8 +137,7 @@ So the new installation prefix will be "/usr"
 
 For more information, refer to the wiki page.
 
-"ntohexample" (TCP/IPv4) Output:
-================================
+#### "ntohexample" (TCP/IPv4) Output:
 
 	$ sudo ./ntohexample 
 	###########################

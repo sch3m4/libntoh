@@ -1,16 +1,18 @@
 #### Introduction
 
-Q: What is libntoh?
+**What is libntoh?**
 
-A: Libntoh aims to be an user-friendly library to provide a easy way to perform defragmentation and reassembly of network/transport/(more?) protocols.
+Libntoh aims to be an user-friendly library to provide a easy way to perform defragmentation and reassembly of network/transport/(more?) protocols.
 
-Q: Why libntoh?
 
-A: It's true there are some libraries which aims to do the same things (like libnids), but libntoh is intended to provide a flexible, thread-safe and highly configurable environment for the final user. And most of all, libntoh is released under Modified BSD License to avoid many license issues.
+**Why libntoh?**
 
-Q: Which protocols does libntoh support?
+It's true there are some libraries which aims to do the same things (like libnids), but libntoh is intended to provide a flexible, thread-safe and highly configurable environment for the final user. And most of all, libntoh is released under Modified BSD License to avoid many license issues.
 
-A: Currently libntoh performs IPv4/IPv6 defragmentation and TCP reassembly over IPv4 and IPv6.
+
+**Which protocols does libntoh support?**
+
+Currently libntoh performs IPv4/IPv6 defragmentation and TCP reassembly over IPv4 and IPv6.
 
 #### Mailing List
 There is a mailing list for libntoh development issues: libntoh-dev@safetybits.net

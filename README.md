@@ -144,7 +144,7 @@ So the new installation prefix will be "/usr"
 
 For more information, refer to the wiki page.
 
-### "ntohexample" (TCP/IPv4) Output:
+### TCP/IPv4 Example Output:
 
 	$ sudo ./ntohexample 
 	###########################

@@ -52,7 +52,7 @@ You need CMake to compile libntoh and ntohexample.
 
 	$ cd libntoh/src
 	../src$ ./build.sh
-		[i] pkg-config found: /usr/bin/pkg-config
+	[i] pkg-config found: /usr/bin/pkg-config
 	[i] cmake found: /usr/bin/cmake
 	[i] make found: /usr/bin/make
 	[i] PKG_CONFIG_PATH set to: /usr/local/lib/pkgconfig
@@ -108,7 +108,7 @@ For a more detailed description refer to
 
 ### Libntoh Examples
 
-You can find a working source code example for each protocol supported in "examples" folder:
+You can find a working source code example for each supported protocol in "examples" folder:
 
 	libntoh$ ls examples/ -R
 	examples/:

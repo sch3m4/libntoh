@@ -1,3 +1,5 @@
+![build status](https://travis-ci.org/sch3m4/libntoh.svg?branch=master)
+
 ### Introduction
 
 **What is libntoh?**

@@ -159,7 +159,7 @@ void ntoh_ipv4_exit ( void );
 void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session );
 
 /**
- * @brief Creates a new session with independent parameters to reassemble TCP segments
+ * @brief Creates a new session with independent parameters to defragment IPv4
  * @param max_flows Max number of allowed flows in this session
  * @param max_mem Max. amount of memory used by the session
  * @param error Returned error code
@@ -189,19 +189,22 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
  * @param function User defined function to receive defragmented datagrams
  * @param count_max Max. fragments allowed
  * @param udata User defined data associated with this flow
+ * @param error Returned error code
  * @return A pointer to the new created flow
  */
 pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 , pipv4_dfcallback_t function , void *udata , unsigned int *error);
 
 /**
  * @brief Frees an IPv4 flow
- * @param flow IPv4 flow to be freed
- * @param reason Why has been freed the flow?
+ * @param session Pointer to the IPv4 session
+ * @param flow IPv4 flow to be released
+ * @param reason Value to be sent to the user-defined callback. Why has been freed the flow?
  */
 void ntoh_ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t *flow , unsigned short reason );
 
 /**
  * @brief Adds a new IPv4 fragment to a given flow
+ * @param session Pointer to the IPv4 session
  * @param flow Flow where the new fragment will be added
  * @param iphdr IPv4 Header of the fragment
  * @return NTOH_OK on success, or error code when it fails

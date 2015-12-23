@@ -201,8 +201,8 @@ typedef struct _tcp_stream_
 	void 			*udata;
 	ntoh_lock_t		lock;
 
-    unsigned short 		enable_check_timeout;	// @contrib: di3online - https://github.com/di3online
-    unsigned short 		enable_check_nowindow;	// @contrib: di3online - https://github.com/di3online
+	unsigned short 		enable_check_timeout;	// @contrib: di3online - https://github.com/di3online
+	unsigned short 		enable_check_nowindow;	// @contrib: di3online - https://github.com/di3online
 } ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
 typedef htable_t tcprs_streams_table_t;
@@ -229,10 +229,14 @@ typedef struct _tcp_session_
     pthread_t 			tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
+/** @brief structure to store the TCP sessions and the initialization status **/
 typedef struct
 {
+	/// is the library initialized?
         unsigned short          init;
+	/// TCP sessions list
         pntoh_tcp_session_t     sessions_list;
+	//// global mutex to create and free existing TCP sessions
         ntoh_lock_t             lock;
 } ntoh_tcp_params_t , *pntoh_tcp_params_t;
 
@@ -337,7 +341,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
  * @param function User defined function to receive the segments of this stream
  * @param udata User-defined data to be linked to the new stream
  * @param error Returned error code
- * @param enable_tcp_established_timeout enables/disables idle time verification for established connections // @contrib: di3online - https://github.com/di3online
+ * @param enable_check_timeout enables/disables idle time verification for established connections // @contrib: di3online - https://github.com/di3online
  * @param enable_check_nowindow enables/disables TCP Window verification // @contrib: di3online - https://github.com/di3online
  * @return A pointer to the new stream on success or 0 when fails
  */

@@ -289,24 +289,6 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 
 	switch ( reason )
 	{
-        switch ( extra )
-        {
-            case NTOH_REASON_MAX_SYN_RETRIES_REACHED:
-            case NTOH_REASON_MAX_SYNACK_RETRIES_REACHED:
-            case NTOH_REASON_HSFAILED:
-            case NTOH_REASON_EXIT:
-            case NTOH_REASON_TIMEDOUT:
-            case NTOH_REASON_CLOSED:
-                if ( extra == NTOH_REASON_CLOSED )
-                    fprintf ( stderr , "\n\t+ Connection closed by %s (%s)" , stream->closedby == NTOH_CLOSEDBY_CLIENT ? "Client" : "Server" , inet_ntoa( *(struct in_addr*) &(stream->client.addr) ) );
-                else
-                    fprintf ( stderr , "\n\t+ %s/%s - %s" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) , ntoh_tcp_get_status ( stream->status ) );
-
-                break;
-        }
-
-        break;
-
 		/* Data segment */
 		case NTOH_REASON_DATA:
 			fprintf ( stderr , " | Data segment | Bytes: %i" , seg->payload_len );
@@ -317,6 +299,27 @@ void tcp_callback ( pntoh_tcp_stream_t stream , pntoh_tcp_peer_t orig , pntoh_tc
 			if ( extra != 0 )
 					fprintf ( stderr , " - %s" , ntoh_get_reason ( extra ) );
 
+			break;
+
+		default:
+			switch ( extra )
+			{
+			    case NTOH_REASON_MAX_SYN_RETRIES_REACHED:
+			    case NTOH_REASON_MAX_SYNACK_RETRIES_REACHED:
+			    case NTOH_REASON_HSFAILED:
+			    case NTOH_REASON_EXIT:
+			    case NTOH_REASON_TIMEDOUT:
+			    case NTOH_REASON_CLOSED:
+				if ( extra == NTOH_REASON_CLOSED )
+				    fprintf ( stderr , "\n\t+ Connection closed by %s (%s)" , stream->closedby == NTOH_CLOSEDBY_CLIENT ? "Client" : "Server" , inet_ntoa( *(struct in_addr*) &(stream->client.addr) ) );
+				else
+				    fprintf ( stderr , "\n\t+ %s/%s - %s" , ntoh_get_reason ( reason ) , ntoh_get_reason ( extra ) , ntoh_tcp_get_status ( stream->status ) );
+
+				break;
+
+			    default:
+				break;
+			}
 			break;
 	}
 

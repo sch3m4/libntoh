@@ -382,17 +382,6 @@ unsigned int ntoh_tcp_get_tuple5 ( void *ip , struct tcphdr *tcp , pntoh_tcp_tup
 	return NTOH_OK;
 }
 
-unsigned short tcp_equal_tuple ( void *a , void *b )
-{
-	unsigned short ret = 0;
-
-        if ( ! memcmp ( a , (void*)&((pntoh_tcp_stream_t)b)->tuple , sizeof ( ntoh_tcp_tuple5_t ) ) )
-                ret++;
-
-	return ret;
-}
-
-
 /** @brief API to get the size of the sessions table (max allowed streams) **/
 unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
 {

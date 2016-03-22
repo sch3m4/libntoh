@@ -648,16 +648,14 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 unsigned int ntoh_tcp_count_streams ( pntoh_tcp_session_t session )
 {
 	unsigned int	ret = 0;
-	int		count;
+	unsigned int	count;
 
 	if ( !session )
 		return ret;
 
 	lock_access( &session->lock );
 
-	sem_getvalue ( &session->max_streams , &count );
-	ret = session->streams->table_size - count;
-	//ret = htable_count ( session->streams );
+	count = HASH_COUNT(session->streams);
 
 	unlock_access( &session->lock );
 	return ret;

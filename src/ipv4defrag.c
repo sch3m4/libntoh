@@ -70,16 +70,6 @@ unsigned int ntoh_ipv4_get_tuple4 ( struct ip *ip , pntoh_ipv4_tuple4_t tuple )
 	return NTOH_OK;
 }
 
-unsigned short ipv4_equal_tuple ( void *a , void *b )
-{
-	unsigned short ret = 0;
-
-	if ( ! memcmp ( a , (void*)&((pntoh_ipv4_flow_t)b)->ident , sizeof ( ntoh_ipv4_tuple4_t) ) )
-		ret++;
-
-	return ret;
-}
-
 pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
 	pntoh_ipv4_flow_t ret = 0;

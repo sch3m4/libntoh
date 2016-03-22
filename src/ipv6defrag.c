@@ -82,16 +82,14 @@ unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tup
 
 pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
-	ntoh_ipv6_key_t key = 0;
 	pntoh_ipv6_flow_t ret = 0;
 
 	if ( !params.init || !session || !tuple4 )
 		return ret;
 
-	key = ip_get_hashkey( tuple4 );
-
 	lock_access( &session->lock );
-	ret = htable_find ( session->flows , key, tuple4);
+
+	HASH_FIND(hh, session->flows, tuple4, sizeof(*tuple4), ret);
 
 	unlock_access( &session->lock );
 

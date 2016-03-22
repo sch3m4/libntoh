@@ -35,36 +35,6 @@
 # define _HIDDEN __attribute__((visibility("hidden")))
 #endif
 
-/* linked list */
-typedef struct _hash_node_
-{
-	struct _hash_node_	*next;
-	void			*val;
-	unsigned int		key;
-} htnode_t , *phtnode_t;
-
-typedef unsigned short fcmp_t (void *a, void *b);
-
-/* hash table definition */
-typedef struct
-{
-	size_t		table_size;
-	phtnode_t	*table;
-	fcmp_t		*equals;
-} htable_t , *phtable_t;
-
-/******************************************************************/
-/** Hash Table implementation (collision resolution by chaining) **/
-/******************************************************************/
-phtable_t htable_map ( size_t size , fcmp_t *equal_func );
-int htable_insert ( phtable_t ht  , unsigned int key , void *val );
-void *htable_find ( phtable_t ht , unsigned int key, void *ip_tuple4 );
-void *htable_remove ( phtable_t ht , unsigned int key, void *ip_tuple4 );
-unsigned int htable_count ( phtable_t ht );
-unsigned int htable_first ( phtable_t ht );
-void htable_destroy ( phtable_t *ht );
-
-
 /** @brief Access locking **/
 void lock_access ( pntoh_lock_t lock );
 /** @brief Access unlocking **/

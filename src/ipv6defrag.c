@@ -219,6 +219,7 @@ inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_
 {
 	unsigned char		*buffer = 0;
 	pntoh_ipv6_flow_t	item = 0;
+	pntoh_ipv4_flow_t	fptr = 0;
 
 	if ( !flow || !(*flow) )
 		return;
@@ -231,7 +232,10 @@ inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_
 	( (pipv6_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	htable_remove ( session->flows , item->key, &(item->ident) );
+	HASH_FIND(hh, session->flows, &item->ident, sizeof(item->ident), fptr);
+	if (fptr) {
+		HASH_DEL(session->flows, fptr);
+	}
 
 	sem_post( &session->max_flows );
 

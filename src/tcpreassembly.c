@@ -417,8 +417,8 @@ pntoh_tcp_session_t ntoh_tcp_new_session ( unsigned int max_streams , unsigned i
 
 	ntoh_tcp_init();
 
-	session->streams = htable_map ( max_streams , &tcp_equal_tuple );
-	session->timewait = htable_map ( max_timewait , &tcp_equal_tuple );
+	session->streams = NULL;
+	session->timewait = NULL;
 
 	sem_init ( &session->max_streams , 0 , max_streams );
 	sem_init ( &session->max_timewait , 0 , max_timewait );

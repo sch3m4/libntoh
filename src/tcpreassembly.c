@@ -216,6 +216,7 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 {
 	pntoh_tcp_session_t	ptr = 0;
 	pntoh_tcp_stream_t 	item = 0;
+	pntoh_tcp_stream_t 	tmp = 0;
 	ntoh_tcp_key_t		first = 0;
 
 	if ( params.sessions_list == session )
@@ -228,19 +229,20 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 
 	lock_access( &session->lock );
 
-	while ( ( first = htable_first ( session->timewait ) ) != 0 )
-	{
-		item = (pntoh_tcp_stream_t)htable_remove(session->timewait,first,0);
+	HASH_ITER(hh, session->timewait, item, tmp) {
+		HASH_DEL(session->timewait, item);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
 
-	while ( ( first = htable_first ( session->streams ) ) != 0 )
-	{
-		item = (pntoh_tcp_stream_t)htable_remove(session->streams,first, 0);
+	HASH_ITER(hh, session->streams, item, tmp) {
+		HASH_DEL(session->streams, item);
 		lock_access ( &item->lock );
 		__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_EXIT );
 	}
+
+	HASH_CLEAR(hh, session->streams);
+	HASH_CLEAR(hh, session->timewait);
 
 	unlock_access( &session->lock );
 
@@ -250,9 +252,6 @@ inline static void __tcp_free_session ( pntoh_tcp_session_t session )
 	sem_destroy ( &session->max_timewait );
 
 	free_lockaccess ( &session->lock );
-
-	htable_destroy ( &session->streams );
-	htable_destroy ( &session->timewait );
 
 	free ( session );
 

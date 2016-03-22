@@ -267,87 +267,60 @@ inline static void tcp_check_timeouts ( pntoh_tcp_session_t session )
 	unsigned int		i = 0;
 	unsigned short		timedout = 0;
 	pntoh_tcp_stream_t	item;
-	phtnode_t		node = 0;
-	phtnode_t		prev = 0;
+	pntoh_tcp_stream_t	tmp;
 
 	lock_access( &session->lock );
 
+	gettimeofday ( &tv , 0 );
+
 	/* iterating manually between flows */
-	for ( i = 0 ; i < session->streams->table_size ; i++ )
-	{
-		node = prev = session->streams->table[i];
-		while ( node != 0 )
+	HASH_ITER(hh, session->streams, item, tmp) {
+		timedout = 0;
+		val = tv.tv_sec - item->last_activ.tv_sec;
+
+		switch ( item->status )
 		{
-			timedout = 0;
-			gettimeofday ( &tv , 0 );
-			item = (pntoh_tcp_stream_t) node->val;
-			val = tv.tv_sec - item->last_activ.tv_sec;
+			case NTOH_STATUS_SYNSENT:
+				if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNSENT_TIMEOUT) && (val > DEFAULT_TCP_SYNSENT_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
+					timedout = 1;
+				break;
 
-			switch ( item->status )
-			{
-				case NTOH_STATUS_SYNSENT:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNSENT_TIMEOUT) && (val > DEFAULT_TCP_SYNSENT_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
-						timedout = 1;
-					break;
+			case NTOH_STATUS_SYNRCV:
+				if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNRCV_TIMEOUT) && (val > DEFAULT_TCP_SYNRCV_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
+					timedout = 1;
+				break;
 
-				case NTOH_STATUS_SYNRCV:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_SYNRCV_TIMEOUT) && (val > DEFAULT_TCP_SYNRCV_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
-						timedout = 1;
-					break;
+			case NTOH_STATUS_ESTABLISHED:
+				if ( (item->enable_check_timeout & NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT) && (val > DEFAULT_TCP_ESTABLISHED_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
+					timedout = 1;
+				break;
 
-				case NTOH_STATUS_ESTABLISHED:
-					if ( (item->enable_check_timeout & NTOH_CHECK_TCP_ESTABLISHED_TIMEOUT) && (val > DEFAULT_TCP_ESTABLISHED_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
-						timedout = 1;
-					break;
+			case NTOH_STATUS_CLOSING:
+				if ( IS_FINWAIT2(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_FINWAIT2_TIMEOUT) && (val < DEFAULT_TCP_FINWAIT2_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
+					timedout = 1;
+				else if ( IS_TIMEWAIT(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) &&  val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
+					timedout = 1;
+				break;
+		}
 
-				case NTOH_STATUS_CLOSING:
-					if ( IS_FINWAIT2(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_FINWAIT2_TIMEOUT) && (val < DEFAULT_TCP_FINWAIT2_TIMEOUT) )// @contrib: di3online - https://github.com/di3online
-						timedout = 1;
-					else if ( IS_TIMEWAIT(item->client,item->server) && (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) &&  val < DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
-						timedout = 1;
-					break;
-			}
-
-			/* timeout expired */
-			if ( timedout )
-			{
-				lock_access ( &item->lock );
-				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
-				// @contrib: Eosis - https://github.com/Eosis
-				if (node != prev)
-					node = prev;
-				else
-					node = 0;
-			}else{
-				prev = node;
-				node = node->next;
-			}
+		/* timeout expired */
+		if ( timedout )
+		{
+			lock_access ( &item->lock );
+			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+			HASH_DEL(session->streams, item);
 		}
 	}
 
 	/* handly iterates between flows */
-	for ( i = 0 ; i < session->timewait->table_size ; i++ )
-	{
-		node = prev = session->timewait->table[i];
-		while ( node != 0 )
+	HASH_ITER(hh, session->timewait, item, tmp) {
+		val = tv.tv_sec - item->last_activ.tv_sec;
+
+		if ( (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) && val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
 		{
-			item = (pntoh_tcp_stream_t) node->val;
-
-			gettimeofday ( &tv , 0 );
-			val = tv.tv_sec - item->last_activ.tv_sec;
-
-			if ( (item->enable_check_timeout & NTOH_CHECK_TCP_TIMEWAIT_TIMEOUT) && val > DEFAULT_TCP_TIMEWAIT_TIMEOUT )// @contrib: di3online - https://github.com/di3online
-			{
-				lock_access ( &item->lock );
-				__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
-				if (node != prev)
-					node = prev;
-				else
-					node = 0;
-			}else{
-				prev = node;
-				node = node->next;
-			}
+			lock_access ( &item->lock );
+			__tcp_free_stream ( session , &item , NTOH_REASON_SYNC , NTOH_REASON_TIMEDOUT );
+			HASH_DEL(session->timewait, item);
 		}
 	}
 

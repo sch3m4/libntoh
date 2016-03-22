@@ -41,24 +41,6 @@ static ntoh_ipv4_params_t params = { 0 , 0 };
 #define NTOH_GET_IPV4_FRAGMENT_OFFSET(offset)	(8*(ntohs(offset)&IP_OFFMASK))
 #define IS_SET(a,b)				(a & b)
 
-inline static ntoh_ipv4_key_t ip_get_hashkey ( pntoh_ipv4_tuple4_t tuple4 )
-{
-	ntoh_ipv4_key_t ret = 0;
-	unsigned int hold = 0;
-
-	if ( !tuple4 )
-		return ret;
-
-	// @contrib: Eosis - https://github.com/Eosis
-	ret = tuple4->source ^ tuple4->destination;
-	ret ^= tuple4->id;
-	hold = tuple4->protocol;
-	hold = hold << 16; //skip the id bits
-	ret ^= hold;
-
-	return ret;
-}
-
 /** @brief API to get the size of the flows table (max allowed flows) **/
 unsigned int ntoh_ipv4_get_size ( pntoh_ipv4_session_t session )
 {

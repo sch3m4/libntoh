@@ -488,7 +488,7 @@ pntoh_ipv4_session_t ntoh_ipv4_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-	session->flows = htable_map (max_flows , &ipv4_equal_tuple );
+	session->flows = NULL;
 	sem_init ( &session->max_flows , 0 , max_flows );
 	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );

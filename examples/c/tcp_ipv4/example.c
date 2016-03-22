@@ -337,7 +337,7 @@ void ipv4_callback ( pntoh_ipv4_flow_t flow , pntoh_ipv4_tuple4_t tuple , unsign
 	unsigned int i = 0;
 
 	fprintf( stderr, "\n\n[i] Got an IPv4 datagram! (%s) %s --> ", ntoh_get_reason(reason) , inet_ntoa( *(struct in_addr*) &tuple->source ) );
-	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+	fprintf( stderr, "%s | %zu/%zu bytes - ID: %02x - Proto: %d (%s)\n\n", inet_ntoa( *(struct in_addr*) &tuple->destination ), len, flow->total , ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	if ( tuple->protocol == IPPROTO_TCP )
 		send_tcp_segment ( (struct ip*) data , &tcp_callback );

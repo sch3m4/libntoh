@@ -360,7 +360,7 @@ void ipv6_callback ( pntoh_ipv6_flow_t flow , pntoh_ipv6_tuple4_t tuple , unsign
         inet_ntop ( AF_INET6 , (void*) &tuple->destination , dst , INET6_ADDRSTRLEN );
 
 	fprintf( stderr, "\n\n[i] Got an IPv4 datagram! (%s - %d) %s --> ", ntoh_get_reason(reason) , reason , src );
-	fprintf( stderr, "%s | %zu/%zu bytes - Key: %04x - ID: %02x - Proto: %d (%s)\n\n", dst , len, flow->total , flow->key, ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
+	fprintf( stderr, "%s | %zu/%zu bytes - ID: %02x - Proto: %d (%s)\n\n", dst , len, flow->total , ntohs( tuple->id ), tuple->protocol, get_proto_description( tuple->protocol ) );
 
 	if ( tuple->protocol == IPPROTO_TCP )
 		send_tcp_segment ( (struct ip6_hdr*) data , &tcp_callback );

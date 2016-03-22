@@ -116,23 +116,23 @@ pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv
 
 pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 , pipv4_dfcallback_t function , void *udata , unsigned int *error)
 {
-	pntoh_ipv4_flow_t ret = 0;
+	pntoh_ipv4_flow_t flow = 0;
 
-    if ( error != 0 )
-        *error = 0;
+	if ( error != 0 )
+		*error = 0;
 
 	if ( !params.init )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_INIT;
-		return ret;
+		return flow;
 	}
 
 	if ( !session || !tuple4 || !function )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_PARAMS;
-		return ret;
+		return flow;
 	}
 
 	if ( sem_trywait( &session->max_flows ) != 0 )
@@ -140,30 +140,29 @@ pntoh_ipv4_flow_t ntoh_ipv4_new_flow ( pntoh_ipv4_session_t session , pntoh_ipv4
 		if ( error != 0 )
 			*error = NTOH_ERROR_NOSPACE;
 
-		return ret;
+		return flow;
 	}
 
-	if ( !( ret = (pntoh_ipv4_flow_t) calloc( 1, sizeof(ntoh_ipv4_flow_t) ) ) )
-		return ret;
+	if ( !( flow = (pntoh_ipv4_flow_t) calloc( 1, sizeof(ntoh_ipv4_flow_t) ) ) )
+		return flow;
 
-	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv4_tuple4_t) );
-	ret->key = ip_get_hashkey( tuple4 );
+	memcpy( &( flow->ident ), tuple4, sizeof(ntoh_ipv4_tuple4_t) );
 
-	gettimeofday( &ret->last_activ, 0 );
-	ret->function = (void*) function;
-	ret->udata = udata;
+	gettimeofday( &flow->last_activ, 0 );
+	flow->function = (void*) function;
+	flow->udata = udata;
 
-	ret->lock.use = 0;
-	pthread_mutex_init ( &ret->lock.mutex , 0 );
-	pthread_cond_init ( &ret->lock.pcond , 0 );
+	flow->lock.use = 0;
+	pthread_mutex_init ( &flow->lock.mutex , 0 );
+	pthread_cond_init ( &flow->lock.pcond , 0 );
 
 	lock_access( &session->lock );
 
-	htable_insert ( session->flows , ret->key , ret );
+        HASH_ADD(hh, session->flows, ident, sizeof(ntoh_ipv4_tuple4_t), flow);
 
 	unlock_access( &session->lock );
 
-	return ret;
+	return flow;
 }
 
 /* insert a new fragment */

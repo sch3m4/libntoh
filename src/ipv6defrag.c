@@ -52,7 +52,7 @@ unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 		return ret;
 
 	lock_access ( & (session->lock) );
-	ret = session->flows->table_size;
+	ret = -1;
 	unlock_access ( & (session->lock) );
 
 	return ret;

@@ -83,7 +83,7 @@ void shandler ( int sign )
 /**
  * @brief Returns the name of a protocol
  */
-inline char *get_proto_description ( unsigned short proto )
+char *get_proto_description ( unsigned short proto )
 {
 	switch ( proto )
 	{

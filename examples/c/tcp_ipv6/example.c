@@ -137,7 +137,7 @@ void free_peer_info ( ppeer_info_t pinfo )
 /**
  * @brief Returns the name of a protocol
  */
-inline char *get_proto_description ( unsigned short proto )
+char *get_proto_description ( unsigned short proto )
 {
 	switch ( proto )
 	{

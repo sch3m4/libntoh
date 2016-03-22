@@ -1358,65 +1358,8 @@ exitp:
 /* @brief resizes the hash table of a given TCP session */
 int ntoh_tcp_resize_session ( pntoh_tcp_session_t session , unsigned short table , size_t newsize )
 {
-	ptcprs_streams_table_t	newht = 0 , curht = 0;
-	pntoh_tcp_stream_t	item = 0;
-	int			current = 0;
-
 	if ( !session )
 		return NTOH_INCORRECT_SESSION;
-
-
-	if ( ! newsize || newsize == session->streams->table_size )
-		return NTOH_OK;
-
-	switch ( table )
-	{
-		case NTOH_RESIZE_STREAMS:
-			curht = session->streams;
-			break;
-
-		case NTOH_RESIZE_TIMEWAIT:
-			curht = session->timewait;
-			break;
-
-		default:
-			return NTOH_ERROR_PARAMS;
-	}
-
-	lock_access ( &session->lock );
-	// increase the size
-	if ( newsize > curht->table_size )
-		newht = htable_map ( newsize , &tcp_equal_tuple );
-	// decrease the size
-	else
-	{
-		sem_getvalue ( &session->max_streams , &current );
-		if ( newsize < current )
-		{
-			unlock_access ( &session->lock );
-			return NTOH_ERROR_NOSPACE;
-		}
-	}
-
-	// moves all the streams to the new sessions table
-	while ( ( current = htable_first ( curht ) ) != 0 )
-	{
-		item = (pntoh_tcp_stream_t) htable_remove ( curht , current , 0 );
-		htable_insert ( newht , current , item );
-	}
-	htable_destroy ( &curht );
-
-
-	if ( table == NTOH_RESIZE_TIMEWAIT )
-	{
-		sem_init ( &session->max_timewait , 0 , newsize );
-		session->streams = newht;
-	}else{
-		sem_init ( &session->max_streams , 0 , newsize );
-		session->timewait = newht;
-	}
-
-	unlock_access ( &session->lock );
 
 	return NTOH_OK;
 }

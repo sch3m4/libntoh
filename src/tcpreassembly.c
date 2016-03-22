@@ -391,7 +391,7 @@ unsigned int ntoh_tcp_get_size ( pntoh_tcp_session_t session )
 		return ret;
 
 	lock_access ( & (session->lock) );
-	ret = session->streams->table_size;
+	ret = -1;
 	unlock_access ( & (session->lock) );
 
 	return ret;

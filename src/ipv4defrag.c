@@ -100,16 +100,14 @@ unsigned short ipv4_equal_tuple ( void *a , void *b )
 
 pntoh_ipv4_flow_t ntoh_ipv4_find_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_tuple4_t tuple4 )
 {
-	ntoh_ipv4_key_t key = 0;
 	pntoh_ipv4_flow_t ret = 0;
 
 	if ( !params.init || !session || !tuple4 )
 		return ret;
 
-	key = ip_get_hashkey( tuple4 );
-
 	lock_access( &session->lock );
-	ret = htable_find ( session->flows , key, tuple4);
+
+	HASH_FIND(hh, session->flows, tuple4, sizeof(*tuple4), ret);
 
 	unlock_access( &session->lock );
 

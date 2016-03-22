@@ -151,22 +151,29 @@ inline static void flush_peer_queues ( pntoh_tcp_session_t session , pntoh_tcp_s
 inline static void delete_stream ( pntoh_tcp_session_t session , pntoh_tcp_stream_t *stream , int reason , int extra )
 {
 	pntoh_tcp_stream_t item = 0;
+	pntoh_tcp_stream_t sptr;
 
 	if ( !stream || !(*stream) )
 		return;
 
 	item = *stream;
 
-	if ( session->streams != 0 && htable_find ( session->streams, item->key, 0 ) != 0 )
+	if ( session->streams != 0)
 	{
-		htable_remove ( session->streams , item->key, 0);
-		sem_post ( &session->max_streams );
+		HASH_FIND(hh, session->streams, &item->tuple, sizeof(item->tuple), sptr);
+		if (sptr) {
+			HASH_DEL(session->streams, sptr);
+			sem_post ( &session->max_streams );
+		}
 	}
 
-	if ( session->timewait != 0 && htable_find ( session->timewait, item->key, 0 ) != 0 )
+	if ( session->timewait != 0)
 	{
-		htable_remove ( session->timewait , item->key, 0 );
-		sem_post ( &session->max_timewait );
+		HASH_FIND(hh, session->timewait, &item->tuple, sizeof(item->tuple), sptr);
+		if (sptr) {
+			HASH_DEL(session->timewait, sptr);
+			sem_post ( &session->max_timewait );
+		}
 	}
 
 	switch ( extra )

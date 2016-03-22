@@ -265,13 +265,13 @@ void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flo
 
 int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr )
 {
-	size_t                  iphdr_len = 0;
-	unsigned short          offset = 0;
-	unsigned int            data_len = 0;
-	unsigned char           *data = 0;
+	size_t			iphdr_len = 0;
+	unsigned short		offset = 0;
+	unsigned int		data_len = 0;
+	unsigned char		*data = 0;
 	int			ret = NTOH_OK;
-	pntoh_ipv6_fragment_t   frag = 0;
-	struct ip6_frag         *frhdr = 0;
+	pntoh_ipv6_fragment_t	frag = 0;
+	struct ip6_frag		*frhdr = 0;
 	size_t			len = 0;
 
 	if ( !params.init )

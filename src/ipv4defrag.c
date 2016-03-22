@@ -320,9 +320,9 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	if ( !iphdr )
 		return NTOH_INCORRECT_IP_HEADER;
 
-        /* check if it is an IPv4 packet */
-        if ( iphdr->ip_v != 4 )
-                return NTOH_NOT_IPV4;
+	/* check if it is an IPv4 packet */
+	if ( iphdr->ip_v != 4 )
+		return NTOH_NOT_IPV4;
 
 	/* get IP header and data length */
 	if ( ( iphdr_len = 4 * ( iphdr->ip_hl ) ) < sizeof(struct ip) )
@@ -384,7 +384,7 @@ int ntoh_ipv4_add_fragment ( pntoh_ipv4_session_t session , pntoh_ipv4_flow_t fl
 	memcpy ( frag->data , data , data_len );
 	flow->fragments = insert_fragment ( flow->fragments , frag );
 
-    if ( flow->total < offset + data_len )
+	if ( flow->total < offset + data_len )
 		flow->total = offset + data_len;
 
 	flow->meat += data_len;

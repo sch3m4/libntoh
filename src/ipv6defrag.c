@@ -43,39 +43,6 @@ static ntoh_ipv6_params_t params = { 0 , 0 };
 #define NTOH_GET_IPV6_MORE_FRAGMENTS(offset)    ntohs(offset&IP6F_MORE_FRAG)
 #define IS_SET(a,b)				(a & b)
 
-inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_tuple4_t tuple4 )
-{
-	unsigned char   tmp[50] = {0};
-	ntoh_ipv6_key_t ret = 0;
-	uint32_t         i;
-
-	if ( !tuple4 )
-		return ret;
-
-	for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
-	{
-		tmp[i] = tuple4->source[i];
-		tmp[sizeof(tuple4->source) + i ] = tuple4->destination[i];
-	}
-
-	tmp[i] = tuple4->protocol;
-	tmp[i+1] &= tuple4->id;
-
-	// jenkins one-at-time hash algorithm
-	for(ret = i = 0; i < sizeof(tmp) ; ++i)
-	{
-		ret += tmp[i];
-		ret += (ret << 10);
-		ret ^= (ret >> 6);
-	}
-
-	ret += (ret << 3);
-	ret ^= (ret >> 11);
-	ret += (ret << 15);
-
-	return ret;
-}
-
 /** @brief API to get the size of the flows table (max allowed flows) **/
 unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 {

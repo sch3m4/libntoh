@@ -954,6 +954,7 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	pntoh_tcp_peer_t	peer = origin;
 	pntoh_tcp_peer_t	side = destination;
 	pntoh_tcp_stream_t	twait = 0;
+	pntoh_tcp_stream_t	sptr = 0;
 	ntoh_tcp_key_t		key = 0;
 
 	send_peer_segments ( session , stream , destination , origin , origin->next_seq , 0 , 0, who );
@@ -1080,19 +1081,21 @@ inline static void handle_closing_connection ( pntoh_tcp_session_t session , pnt
 	/* should we add this stream to TIMEWAIT queue? */
 	if ( stream->status == NTOH_STATUS_CLOSING && IS_TIMEWAIT(stream->client , stream->server) )
 	{
-		if ( ! htable_find ( session->timewait , stream->key , 0 ) )
+		HASH_FIND(hh, session->timewait, stream, sizeof(*stream), sptr);
+		if ( ! sptr )
 		{
-			htable_remove ( session->streams , stream->key, 0 );
+			HASH_DEL(session->streams, sptr);
 			sem_post ( &session->max_streams );
 
+/*
 			while ( sem_trywait ( &session->max_timewait ) != 0 )
 			{
 				key = htable_first ( session->timewait );
 				twait = htable_remove ( session->timewait , key, 0 );
 				__tcp_free_stream ( session , &twait , NTOH_REASON_SYNC , NTOH_REASON_CLOSED );
 			}
-
-			htable_insert ( session->timewait , stream->key , stream );
+*/
+			HASH_ADD(hh, session->timewait, tuple, sizeof(ntoh_tcp_tuple5_t), stream);
 		}
 	}
 

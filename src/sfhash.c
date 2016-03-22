@@ -1,7 +1,7 @@
 #include <sfhash.h>
 #include <libntoh.h>
 
-#define get16bits(d) (*((const unsigned short *) (d)))
+#define sfhash_get16bits(d) (*((const unsigned short *) (d)))
 
 /* The most generic version, hashes an arbitrary sequence
  * of bytes.  No alignment or length assumptions are made about
@@ -23,8 +23,8 @@ _HIDDEN unsigned int sfhash(const void * key, unsigned int len, unsigned int ini
 	for (; len > 0; len--)
 	{
 		/* Mix 32bit chunk of the data */
-		hash += get16bits(data);
-		tmp   = (get16bits(data+2) << 11) ^ hash;
+		hash += sfhash_get16bits(data);
+		tmp   = (sfhash_get16bits(data+2) << 11) ^ hash;
 		hash  = (hash << 16) ^ tmp;
 		data += 2*sizeof(unsigned short);
 		hash += hash >> 11;

@@ -611,7 +611,6 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	}
 
 	memcpy( (void*)&( stream->tuple ), (void*)tuple5, sizeof(ntoh_tcp_tuple5_t) );
-	stream->key = key;
 
 	for ( i = 0 ; i < IP6_ADDR_LEN ; i++ )
 	{
@@ -635,7 +634,7 @@ pntoh_tcp_stream_t ntoh_tcp_new_stream ( pntoh_tcp_session_t session , pntoh_tcp
 	pthread_mutex_init( &stream->lock.mutex, 0 );
 	pthread_cond_init( &stream->lock.pcond, 0 );
 
-	htable_insert ( session->streams , key , stream );
+	HASH_ADD(hh, session->streams, tuple, sizeof(ntoh_tcp_tuple5_t), stream);
 
 	unlock_access( &session->lock );
 

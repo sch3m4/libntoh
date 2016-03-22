@@ -490,9 +490,9 @@ pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned l
 
 inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 {
-	ntoh_ipv6_key_t	first = 0;
 	pntoh_ipv6_session_t ptr = 0;
 	pntoh_ipv6_flow_t item = 0;
+	pntoh_ipv6_flow_t tmp = 0;
 
 	if ( !session )
 		return;
@@ -510,13 +510,12 @@ inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	lock_access( &session->lock );
 
-	while ( ( first = htable_first ( session->flows ) ) != 0 )
-	{
+	HASH_ITER(hh, session->flows, item, tmp) {
 		lock_access ( &item->lock );
 		__ipv6_free_flow ( session , &item , NTOH_REASON_EXIT );
 	}
 
-	htable_destroy ( &(session->flows) );
+	HASH_CLEAR(hh, session->flows);
 
 	pthread_cancel ( session->tID );
 	pthread_join ( session->tID , 0 );
@@ -525,9 +524,9 @@ inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	free_lockaccess ( &session->lock );
 
-    free ( session );
+	free ( session );
 
-    return;
+	return;
 }
 
 void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
@@ -541,7 +540,7 @@ void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	unlock_access ( &params.lock );
 
-    return;
+	return;
 }
 
 int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t newsize )

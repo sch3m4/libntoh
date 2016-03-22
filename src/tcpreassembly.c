@@ -1236,8 +1236,10 @@ int ntoh_tcp_add_segment ( pntoh_tcp_session_t session , pntoh_tcp_stream_t stre
 	if ( !(
 		( tcp->th_dport == stream->tuple.dport && tcp->th_sport == stream->tuple.sport ) ||
     		( tcp->th_dport == stream->tuple.sport && tcp->th_sport == stream->tuple.dport )
-	))
-		return NTOH_TCP_PORTS_MISMATCH;
+	)) {
+		ret = NTOH_TCP_PORTS_MISMATCH;
+		goto exitp;
+	}
 
 	if ( ip4hdr->ip_v == 4 )
 		payload_len = ntohs(ip4hdr->ip_len) - iphdr_len - tcphdr_len;

@@ -545,46 +545,11 @@ void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
 
 int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t newsize )
 {
-        pipv6_flows_table_t	newht = 0 , curht = 0;
-        pntoh_ipv6_flow_t	item = 0;
-        int                     current = 0;
+	pntoh_ipv6_flow_t	item = 0;
+	int			current = 0;
 
 	if ( ! session )
 		return NTOH_INCORRECT_SESSION;
-
-	if ( ! newsize || newsize == session->flows->table_size )
-		return NTOH_OK;
-
-	lock_access ( &session->lock );
-
-	curht = session->flows;
-
-        // increase the size
-        if ( newsize > curht->table_size )
-                newht = htable_map ( newsize , &ipv6_equal_tuple );
-        // decrease the size
-        else
-        {
-                sem_getvalue ( &session->max_flows , &current );
-                if ( newsize < current )
-                {
-                        unlock_access ( &session->lock );
-                        return NTOH_ERROR_NOSPACE;
-                }
-        }
-
-        // moves all the flows to the new sessions table
-        while ( ( current = htable_first ( curht ) ) != 0 )
-        {
-                item = (pntoh_ipv6_flow_t) htable_remove ( curht , current , 0 );
-                htable_insert ( newht , current , item );
-        }
-        htable_destroy ( &curht );
-
-	sem_init ( &session->max_flows , 0 , newsize );
-	session->flows = newht;
-
-	unlock_access ( &session->lock );
 
 	return NTOH_OK;
 }

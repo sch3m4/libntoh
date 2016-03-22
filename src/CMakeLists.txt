@@ -35,7 +35,9 @@ INCLUDE_DIRECTORIES ( ${CMAKE_INCLUDE_PATH})
 
 # set target from source
 ADD_LIBRARY( ${OUTPUT_LIB} SHARED ${LIBNTOH_SRCS} )
-#ADD_LIBRARY( ${OUTPUT_LIB} STATIC ${LIBNTOH_SRCS} ) // static: comment the line above and uncomment this one to compile as static library (contrib by Di3)
+ADD_LIBRARY( ${OUTPUT_LIB}_static STATIC ${LIBNTOH_SRCS} )
+SET_PROPERTY(TARGET ${OUTPUT_LIB} PROPERTY POSITION_INDEPENDENT_CODE 1)
+SET_PROPERTY(TARGET ${OUTPUT_LIB}_static PROPERTY POSITION_INDEPENDENT_CODE 1)
 
 # pkgconfig file
 CONFIGURE_FILE ( ntoh.pc.in ntoh.pc @ONLY )
@@ -48,7 +50,7 @@ TARGET_LINK_LIBRARIES( ${OUTPUT_LIB} ${CMAKE_THREAD_LIBS_INIT})
 ###########################
 # library
 INSTALL ( TARGETS ${OUTPUT_LIB} LIBRARY DESTINATION lib )
-#INSTALL ( TARGETS ${OUTPUT_LIB} ARCHIVE DESTINATION lib )// static: comment the line above and uncomment this one to compile as static library (contrib by Di3)
+INSTALL ( TARGETS ${OUTPUT_LIB}_static ARCHIVE DESTINATION lib )
 # headers
 INSTALL ( FILES ${LIBNTOH_INC}/libntoh.h ${LIBNTOH_INC}/tcpreassembly.h ${LIBNTOH_INC}/sfhash.h ${LIBNTOH_INC}/ipv4defrag.h ${LIBNTOH_INC}/ipv6defrag.h ${LIBNTOH_INC}/common.h DESTINATION include/libntoh )
 # pkconfig file

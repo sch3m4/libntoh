@@ -404,34 +404,21 @@ inline static void ip_check_timeouts ( pntoh_ipv6_session_t session )
 {
 	struct timeval		tv = { 0 , 0 };
 	pntoh_ipv6_flow_t	item;
+	pntoh_ipv6_flow_t	tmp;
 	unsigned int		i = 0;
-	phtnode_t		node = 0;
-	phtnode_t		prev = 0;
 
 	lock_access( &session->lock );
 
-	/* handly iterates between flows */
-	for ( i = 0 ; i < session->flows->table_size ; i++ )
-	{
-		gettimeofday ( &tv , 0 );
-		node = prev = session->flows->table[i];
-		while ( node != 0 )
-		{
-			item = (pntoh_ipv6_flow_t) node->val;
+	gettimeofday ( &tv , 0 );
 
-			/* timeout expired */
-			if ( DEFAULT_IPV6_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
-			{
-				lock_access ( &item->lock );
-				__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
-				if (node != prev)
-				      node = prev;
-				else
-				      node = 0;
-			}else{
-				prev = node;
-				node = node->next;
-			}
+	/* handly iterates between flows */
+	HASH_ITER(hh, session->flows, item, tmp)
+	{
+		/* timeout expired */
+		if ( DEFAULT_IPV6_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
+		{
+			lock_access ( &item->lock );
+			__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
 		}
 	}
 

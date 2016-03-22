@@ -386,16 +386,14 @@ exitp:
 unsigned int ntoh_ipv6_count_flows ( pntoh_ipv6_session_t session )
 {
 	unsigned int	ret = 0;
-	int		count;
+	unsigned int	count;
 
 	if ( !params.init )
 		return ret;
 
 	lock_access( &params.lock );
 
-        sem_getvalue ( &session->max_flows , &count );
-        ret = session->flows->table_size - count;
-//	ret = htable_count ( session->flows );
+	count = HASH_COUNT(session->flows);
 
 	unlock_access( &params.lock );
 

@@ -530,7 +530,8 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 	lock_access( &session->lock );
 
-	if ( ! ( ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key , 0) ) )
+	HASH_FIND(hh, session->streams, tuple5, sizeof(*tuple5), ret);
+	if ( ! ret )
 	{
 		for ( i = 0 ; i < IP6_ADDR_LEN ; i++ )
 		{
@@ -544,7 +545,7 @@ pntoh_tcp_stream_t ntoh_tcp_find_stream ( pntoh_tcp_session_t session , pntoh_tc
 
 		key = tcp_getkey( session , &tuplerev );
 
-		ret = (pntoh_tcp_stream_t) htable_find ( session->streams , key , 0);
+		HASH_FIND(hh, session->streams, &tuplerev, sizeof(tuplerev), ret);
 	}
 
 	unlock_access( &session->lock );

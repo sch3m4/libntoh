@@ -253,6 +253,7 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 {
 	unsigned char *buffer = 0;
 	pntoh_ipv4_flow_t item = 0;
+	pntoh_ipv4_flow_t fptr = 0;
 
 	if ( !flow || !(*flow) )
 		return;
@@ -265,8 +266,11 @@ inline static void __ipv4_free_flow ( pntoh_ipv4_session_t session , pntoh_ipv4_
 	( (pipv4_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	htable_remove ( session->flows , item->key, &(item->ident) );
-
+	HASH_FIND(hh, session->flows, &item->ident, sizeof(item->ident), fptr);
+	if (fptr) {
+		HASH_DEL(session->flows, fptr);
+	}
+	// XXX: tcp put this somewhere else
 	sem_post( &session->max_flows );
 
 	free_lockaccess ( &item->lock );

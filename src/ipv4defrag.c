@@ -571,7 +571,7 @@ void ntoh_ipv4_free_session ( pntoh_ipv4_session_t session )
 
 	unlock_access ( &params.lock );
 
-    return;
+	return;
 }
 
 int ntoh_ipv4_resize_session ( pntoh_ipv4_session_t session , size_t newsize )

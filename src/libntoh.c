@@ -43,9 +43,9 @@ static const char retval_descriptions[][48] =
 		/* ntoh_add_ipv(4|6)fragment */
 		"Success" ,
 		"Incorrect IP flow" ,
+		"Incorrect length" ,
 		"Incorrect IP header" ,
-		"Incorrect length" ,
-		"Incorrect length" ,
+		"Incorrect IP header length" ,
 		"Not an IPv4 datagram" ,
 		"IP addresses mismatch" ,
 		"Not an IPv4 fragment" ,

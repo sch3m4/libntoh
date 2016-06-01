@@ -39,6 +39,8 @@
 #include <arpa/inet.h>
 #include <sys/time.h>
 
+#include <uthash.h>
+
 #include "sfhash.h"
 
 #ifndef IP6_ADDR_LEN
@@ -183,8 +185,6 @@ typedef struct _tcp_stream_
 	ntoh_tcp_peer_t 	client;
 	///server data
 	ntoh_tcp_peer_t 	server;
-	///connection key
-	ntoh_tcp_key_t 		key;
 	///connection status
 	unsigned int 		status;
 	///who closed the connection
@@ -203,41 +203,40 @@ typedef struct _tcp_stream_
 
 	unsigned short 		enable_check_timeout;	// @contrib: di3online - https://github.com/di3online
 	unsigned short 		enable_check_nowindow;	// @contrib: di3online - https://github.com/di3online
-} ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
-typedef htable_t tcprs_streams_table_t;
-typedef phtable_t ptcprs_streams_table_t;
+	UT_hash_handle		hh;
+} ntoh_tcp_stream_t, *pntoh_tcp_stream_t;
 
 /** @brief TCP session data **/
 typedef struct _tcp_session_
 {
-    struct _tcp_session_ 	*next;
+	struct _tcp_session_ 	*next;
 
-    /* max. streams */
-    sem_t 			max_streams;
-    sem_t 			max_timewait;
+	/* max. streams */
+	sem_t 			max_streams;
+	sem_t 			max_timewait;
 
-    /* connections hash table */
-    ptcprs_streams_table_t 	streams;
+	/* connections hash table */
+	pntoh_tcp_stream_t		streams;
 
-    /* TIME-WAIT connections */
-    ptcprs_streams_table_t 	timewait;
+	/* TIME-WAIT connections */
+	pntoh_tcp_stream_t	timewait;
 
-    int 			rand;
+	int 			rand;
 
-    ntoh_lock_t			lock;
-    pthread_t 			tID;
+	ntoh_lock_t			lock;
+	pthread_t 			tID;
 } ntoh_tcp_session_t , *pntoh_tcp_session_t;
 
 /** @brief structure to store the TCP sessions and the initialization status **/
 typedef struct
 {
 	/// is the library initialized?
-        unsigned short          init;
+	unsigned short          init;
 	/// TCP sessions list
-        pntoh_tcp_session_t     sessions_list;
+	pntoh_tcp_session_t     sessions_list;
 	//// global mutex to create and free existing TCP sessions
-        ntoh_lock_t             lock;
+	ntoh_lock_t             lock;
 } ntoh_tcp_params_t , *pntoh_tcp_params_t;
 
 typedef void(*pntoh_tcp_callback_t) ( pntoh_tcp_stream_t , pntoh_tcp_peer_t , pntoh_tcp_peer_t , pntoh_tcp_segment_t , int, int );

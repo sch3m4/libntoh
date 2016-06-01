@@ -35,6 +35,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 
+#include <uthash.h>
+
 /// macro to verify if an IP datagram is part of a fragmented datagram
 #define NTOH_IPV4_IS_FRAGMENT(off)	( ( (8*(ntohs(off) & 0x1FFF)) > 0 || (ntohs(off) & 0x2000) ) && !(ntohs(off) & 0x4000) )
 
@@ -71,8 +73,6 @@ typedef struct
 {
 	/// flow identification data
 	ntoh_ipv4_tuple4_t 		ident;
-	/// flow key
-	ntoh_ipv4_key_t 		key;
 	/// fragments list
 	pntoh_ipv4_fragment_t 		fragments;
 	/// total amount of received data
@@ -88,10 +88,8 @@ typedef struct
 	/// user-defined data
 	void 				*udata;
 	ntoh_lock_t 			lock;
+	UT_hash_handle			hh;
 } ntoh_ipv4_flow_t, *pntoh_ipv4_flow_t;
-
-typedef htable_t ipv4_flows_table_t;
-typedef phtable_t pipv4_flows_table_t;
 
 /** @brief Structure to store global parameters */
 typedef struct _ipv4_session_
@@ -102,11 +100,11 @@ typedef struct _ipv4_session_
 	sem_t 				max_flows;
 	sem_t 				max_fragments;
 	/// hash table to store IP flows
-	pipv4_flows_table_t 		flows;
+	pntoh_ipv4_flow_t		flows;
 	/// connection tables related
 	pthread_t 			tID;
 	ntoh_lock_t 			lock;
-}ntoh_ipv4_session_t , *pntoh_ipv4_session_t ;
+}ntoh_ipv4_session_t , *pntoh_ipv4_session_t;
 
 typedef struct
 {

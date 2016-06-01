@@ -35,6 +35,8 @@
 #include <netinet/in.h>
 #include <netinet/ip6.h>
 
+#include <uthash.h>
+
 #define NTOH_IPV6_IS_FRAGMENT(val)  (((struct ip6_hdr*)val)->ip6_nxt==IPPROTO_FRAGMENT && \
                                      ( \
                                       (ntohs(((struct ip6_frag *)((unsigned char*)val+sizeof(struct ip6_hdr)))->ip6f_offlg) & IP6F_OFF_MASK)>0 || \
@@ -74,8 +76,6 @@ typedef struct
 {
 	/// flow identification data
 	ntoh_ipv6_tuple4_t 	ident;
-	/// flow key
-	ntoh_ipv6_key_t 	key;
 	/// fragments list
 	pntoh_ipv6_fragment_t 	fragments;
 	/// total amount of received data
@@ -91,10 +91,8 @@ typedef struct
 	/// user-defined data
 	void 			*udata;
 	ntoh_lock_t 		lock;
+	UT_hash_handle		hh;
 } ntoh_ipv6_flow_t, *pntoh_ipv6_flow_t;
-
-typedef htable_t ipv6_flows_table_t;
-typedef phtable_t pipv6_flows_table_t;
 
 /** @brief Structure to store global parameters */
 typedef struct _ipv6_session_
@@ -105,7 +103,7 @@ typedef struct _ipv6_session_
 	sem_t 			max_flows;
 	sem_t 			max_fragments;
 	/// hash table to store IP flows
-	pipv6_flows_table_t 	flows;
+	pntoh_ipv6_flow_t	flows;
 	/// connection tables related
 	pthread_t 		tID;
 	ntoh_lock_t 		lock;

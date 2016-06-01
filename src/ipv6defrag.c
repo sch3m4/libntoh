@@ -43,39 +43,6 @@ static ntoh_ipv6_params_t params = { 0 , 0 };
 #define NTOH_GET_IPV6_MORE_FRAGMENTS(offset)    ntohs(offset&IP6F_MORE_FRAG)
 #define IS_SET(a,b)				(a & b)
 
-inline static ntoh_ipv6_key_t ip_get_hashkey ( pntoh_ipv6_tuple4_t tuple4 )
-{
-	unsigned char   tmp[50] = {0};
-	ntoh_ipv6_key_t ret = 0;
-	uint32_t         i;
-
-	if ( !tuple4 )
-		return ret;
-
-	for ( i = 0 ; i < sizeof(tuple4->source) ; i++ )
-	{
-		tmp[i] = tuple4->source[i];
-		tmp[sizeof(tuple4->source) + i ] = tuple4->destination[i];
-	}
-
-	tmp[i] = tuple4->protocol;
-	tmp[i+1] &= tuple4->id;
-
-	// jenkins one-at-time hash algorithm
-	for(ret = i = 0; i < sizeof(tmp) ; ++i)
-	{
-		ret += tmp[i];
-		ret += (ret << 10);
-		ret ^= (ret >> 6);
-	}
-
-	ret += (ret << 3);
-	ret ^= (ret >> 11);
-	ret += (ret << 15);
-
-	return ret;
-}
-
 /** @brief API to get the size of the flows table (max allowed flows) **/
 unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 {
@@ -85,7 +52,7 @@ unsigned int ntoh_ipv6_get_size ( pntoh_ipv6_session_t session )
 		return ret;
 
 	lock_access ( & (session->lock) );
-	ret = session->flows->table_size;
+	ret = -1;
 	unlock_access ( & (session->lock) );
 
 	return ret;
@@ -113,28 +80,16 @@ unsigned int ntoh_ipv6_get_tuple4 ( struct ip6_hdr *ip , pntoh_ipv6_tuple4_t tup
 	return NTOH_OK;
 }
 
-unsigned short ipv6_equal_tuple ( void *a , void *b )
-{
-	unsigned short ret = 0;
-
-        if ( ! memcmp ( a , (void*)&((pntoh_ipv6_flow_t)b)->ident , sizeof ( ntoh_ipv6_tuple4_t) ) )
-		ret++;
-
-	return ret;
-}
-
 pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 )
 {
-	ntoh_ipv6_key_t key = 0;
 	pntoh_ipv6_flow_t ret = 0;
 
 	if ( !params.init || !session || !tuple4 )
 		return ret;
 
-	key = ip_get_hashkey( tuple4 );
-
 	lock_access( &session->lock );
-	ret = htable_find ( session->flows , key, tuple4);
+
+	HASH_FIND(hh, session->flows, tuple4, sizeof(*tuple4), ret);
 
 	unlock_access( &session->lock );
 
@@ -143,23 +98,23 @@ pntoh_ipv6_flow_t ntoh_ipv6_find_flow ( pntoh_ipv6_session_t session , pntoh_ipv
 
 pntoh_ipv6_flow_t ntoh_ipv6_new_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_tuple4_t tuple4 , pipv6_dfcallback_t function , void *udata , unsigned int *error)
 {
-	pntoh_ipv6_flow_t ret = 0;
+	pntoh_ipv6_flow_t flow = 0;
 
 	if ( error != 0 )
-        *error = 0;
+	*error = 0;
 
 	if ( !params.init )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_INIT;
-		return ret;
+		return flow;
 	}
 
 	if ( !session || !tuple4 || !function )
 	{
 		if ( error != 0 )
 			*error = NTOH_ERROR_PARAMS;
-		return ret;
+		return flow;
 	}
 
 	if ( sem_trywait( &session->max_flows ) != 0 )
@@ -167,30 +122,29 @@ pntoh_ipv6_flow_t ntoh_ipv6_new_flow ( pntoh_ipv6_session_t session , pntoh_ipv6
 		if ( error != 0 )
 			*error = NTOH_ERROR_NOSPACE;
 
-		return ret;
+		return flow;
 	}
 
-	if ( !( ret = (pntoh_ipv6_flow_t) calloc( 1, sizeof(ntoh_ipv6_flow_t) ) ) )
-		return ret;
+	if ( !( flow = (pntoh_ipv6_flow_t) calloc( 1, sizeof(ntoh_ipv6_flow_t) ) ) )
+		return flow;
 
-	memcpy( &( ret->ident ), tuple4, sizeof(ntoh_ipv6_tuple4_t) );
-	ret->key = ip_get_hashkey( tuple4 );
+	memcpy( &( flow->ident ), tuple4, sizeof(ntoh_ipv6_tuple4_t) );
 
-	gettimeofday( &ret->last_activ, 0 );
-	ret->function = (void*) function;
-	ret->udata = udata;
+	gettimeofday( &flow->last_activ, 0 );
+	flow->function = (void*) function;
+	flow->udata = udata;
 
-	ret->lock.use = 0;
-	pthread_mutex_init ( &ret->lock.mutex , 0 );
-	pthread_cond_init ( &ret->lock.pcond , 0 );
+	flow->lock.use = 0;
+	pthread_mutex_init ( &flow->lock.mutex , 0 );
+	pthread_cond_init ( &flow->lock.pcond , 0 );
 
 	lock_access( &session->lock );
 
-	htable_insert ( session->flows , ret->key , ret );
+	HASH_ADD(hh, session->flows, ident, sizeof(ntoh_ipv6_tuple4_t), flow);
 
 	unlock_access( &session->lock );
 
-	return ret;
+	return flow;
 }
 
 /* insert a new fragment */
@@ -265,6 +219,7 @@ inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_
 {
 	unsigned char		*buffer = 0;
 	pntoh_ipv6_flow_t	item = 0;
+	pntoh_ipv4_flow_t	fptr = 0;
 
 	if ( !flow || !(*flow) )
 		return;
@@ -277,7 +232,10 @@ inline static void __ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_
 	( (pipv6_dfcallback_t) item->function )( item, &item->ident, buffer , item->meat , reason );
 	free ( buffer );
 
-	htable_remove ( session->flows , item->key, &(item->ident) );
+	HASH_FIND(hh, session->flows, &item->ident, sizeof(item->ident), fptr);
+	if (fptr) {
+		HASH_DEL(session->flows, fptr);
+	}
 
 	sem_post( &session->max_flows );
 
@@ -307,13 +265,13 @@ void ntoh_ipv6_free_flow ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t *flo
 
 int ntoh_ipv6_add_fragment ( pntoh_ipv6_session_t session , pntoh_ipv6_flow_t flow , struct ip6_hdr *iphdr )
 {
-	size_t                  iphdr_len = 0;
-	unsigned short          offset = 0;
-	unsigned int            data_len = 0;
-	unsigned char           *data = 0;
+	size_t			iphdr_len = 0;
+	unsigned short		offset = 0;
+	unsigned int		data_len = 0;
+	unsigned char		*data = 0;
 	int			ret = NTOH_OK;
-	pntoh_ipv6_fragment_t   frag = 0;
-	struct ip6_frag         *frhdr = 0;
+	pntoh_ipv6_fragment_t	frag = 0;
+	struct ip6_frag		*frhdr = 0;
 	size_t			len = 0;
 
 	if ( !params.init )
@@ -428,16 +386,14 @@ exitp:
 unsigned int ntoh_ipv6_count_flows ( pntoh_ipv6_session_t session )
 {
 	unsigned int	ret = 0;
-	int		count;
+	unsigned int	count;
 
 	if ( !params.init )
 		return ret;
 
 	lock_access( &params.lock );
 
-        sem_getvalue ( &session->max_flows , &count );
-        ret = session->flows->table_size - count;
-//	ret = htable_count ( session->flows );
+	count = HASH_COUNT(session->flows);
 
 	unlock_access( &params.lock );
 
@@ -448,34 +404,21 @@ inline static void ip_check_timeouts ( pntoh_ipv6_session_t session )
 {
 	struct timeval		tv = { 0 , 0 };
 	pntoh_ipv6_flow_t	item;
+	pntoh_ipv6_flow_t	tmp;
 	unsigned int		i = 0;
-	phtnode_t		node = 0;
-	phtnode_t		prev = 0;
 
 	lock_access( &session->lock );
 
-	/* handly iterates between flows */
-	for ( i = 0 ; i < session->flows->table_size ; i++ )
-	{
-		gettimeofday ( &tv , 0 );
-		node = prev = session->flows->table[i];
-		while ( node != 0 )
-		{
-			item = (pntoh_ipv6_flow_t) node->val;
+	gettimeofday ( &tv , 0 );
 
-			/* timeout expired */
-			if ( DEFAULT_IPV6_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
-			{
-				lock_access ( &item->lock );
-				__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
-				if (node != prev)
-				      node = prev;
-				else
-				      node = 0;
-			}else{
-				prev = node;
-				node = node->next;
-			}
+	/* handly iterates between flows */
+	HASH_ITER(hh, session->flows, item, tmp)
+	{
+		/* timeout expired */
+		if ( DEFAULT_IPV6_FRAGMENT_TIMEOUT < tv.tv_sec - item->last_activ.tv_sec )
+		{
+			lock_access ( &item->lock );
+			__ipv6_free_flow ( session , &item , NTOH_REASON_TIMEDOUT_FRAGMENTS );
 		}
 	}
 
@@ -515,7 +458,7 @@ pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned l
 		return 0;
 	}
 
-	session->flows = htable_map (max_flows , &ipv6_equal_tuple );
+	session->flows = NULL;
 	sem_init ( &session->max_flows , 0 , max_flows );
 	session->lock.use = 0;
 	pthread_mutex_init ( &session->lock.mutex , 0 );
@@ -547,9 +490,9 @@ pntoh_ipv6_session_t ntoh_ipv6_new_session ( unsigned int max_flows , unsigned l
 
 inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 {
-	ntoh_ipv6_key_t	first = 0;
 	pntoh_ipv6_session_t ptr = 0;
 	pntoh_ipv6_flow_t item = 0;
+	pntoh_ipv6_flow_t tmp = 0;
 
 	if ( !session )
 		return;
@@ -567,13 +510,12 @@ inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	lock_access( &session->lock );
 
-	while ( ( first = htable_first ( session->flows ) ) != 0 )
-	{
+	HASH_ITER(hh, session->flows, item, tmp) {
 		lock_access ( &item->lock );
 		__ipv6_free_flow ( session , &item , NTOH_REASON_EXIT );
 	}
 
-	htable_destroy ( &(session->flows) );
+	HASH_CLEAR(hh, session->flows);
 
 	pthread_cancel ( session->tID );
 	pthread_join ( session->tID , 0 );
@@ -582,9 +524,9 @@ inline static void __ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	free_lockaccess ( &session->lock );
 
-    free ( session );
+	free ( session );
 
-    return;
+	return;
 }
 
 void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
@@ -598,51 +540,16 @@ void ntoh_ipv6_free_session ( pntoh_ipv6_session_t session )
 
 	unlock_access ( &params.lock );
 
-    return;
+	return;
 }
 
 int ntoh_ipv6_resize_session ( pntoh_ipv6_session_t session , size_t newsize )
 {
-        pipv6_flows_table_t	newht = 0 , curht = 0;
-        pntoh_ipv6_flow_t	item = 0;
-        int                     current = 0;
+	pntoh_ipv6_flow_t	item = 0;
+	int			current = 0;
 
 	if ( ! session )
 		return NTOH_INCORRECT_SESSION;
-
-	if ( ! newsize || newsize == session->flows->table_size )
-		return NTOH_OK;
-
-	lock_access ( &session->lock );
-
-	curht = session->flows;
-
-        // increase the size
-        if ( newsize > curht->table_size )
-                newht = htable_map ( newsize , &ipv6_equal_tuple );
-        // decrease the size
-        else
-        {
-                sem_getvalue ( &session->max_flows , &current );
-                if ( newsize < current )
-                {
-                        unlock_access ( &session->lock );
-                        return NTOH_ERROR_NOSPACE;
-                }
-        }
-
-        // moves all the flows to the new sessions table
-        while ( ( current = htable_first ( curht ) ) != 0 )
-        {
-                item = (pntoh_ipv6_flow_t) htable_remove ( curht , current , 0 );
-                htable_insert ( newht , current , item );
-        }
-        htable_destroy ( &curht );
-
-	sem_init ( &session->max_flows , 0 , newsize );
-	session->flows = newht;
-
-	unlock_access ( &session->lock );
 
 	return NTOH_OK;
 }

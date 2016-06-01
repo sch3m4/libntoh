@@ -121,7 +121,7 @@ const char* ntoh_get_retval_desc ( int val )
 	return retval_descriptions[pos];
 }
 
-const char* ntoh_get_reason ( unsigned int val )
+const char* ntoh_get_reason ( int val )
 {
 	if ( !val || val > (sizeof(reason_descriptions) / sizeof(*reason_descriptions)) )
 		return 0;

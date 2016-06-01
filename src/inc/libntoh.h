@@ -130,7 +130,7 @@ const char* ntoh_get_retval_desc ( int val );
  * @param val
  * @return Description string or 0 if val is not found
  */
-const char* ntoh_get_reason ( unsigned int val );
+const char* ntoh_get_reason ( int val );
 
 /**
  * @brief Returns the description of an error

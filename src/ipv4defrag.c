@@ -240,7 +240,7 @@ inline static unsigned char *build_datagram ( pntoh_ipv4_session_t session , pnt
 	{
 		memcpy ( ret , iphdr , offsethdr );
 		iphdr = (struct ip*)ret;
-		iphdr->ip_len = htons(flow->total);
+		iphdr->ip_len = htons(flow->total + offsethdr);
 		iphdr->ip_sum = 0;
 		iphdr->ip_sum = cksum ( (unsigned short*) iphdr , (int)offsethdr );
 		free ( flow->final_iphdr );
